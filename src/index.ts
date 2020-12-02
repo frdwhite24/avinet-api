@@ -1,14 +1,46 @@
-import express from "express";
-const app = express();
-app.use(express.json());
+import { ApolloServer, gql } from "apollo-server";
+import { connect } from "mongoose";
 
-const PORT = 3000;
+import { MONGODB_URI } from "./utils/config";
+import User from "./models/user";
 
-app.get("/ping", (_req, res) => {
-  console.log("someone pinged here");
-  res.send("pong");
-});
+console.log("Connecting to", MONGODB_URI);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+void connect(MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  useFindAndModify: false,
+  useCreateIndex: true,
+})
+  .then(() => {
+    console.log("Connected to MongoDB");
+  })
+  .catch((error) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    console.log("Error connecting to MongoDB", error.message);
+  });
+
+const typeDefs = gql`
+  type User {
+    firstName: String!
+    lastName: String!
+    username: String!
+    id: ID!
+  }
+
+  type Query {
+    allUsers: [User!]!
+  }
+`;
+
+const resolvers = {
+  Query: {
+    allUsers: () => User.find({}),
+  },
+};
+
+const server = new ApolloServer({ typeDefs, resolvers });
+
+void server.listen().then(({ url }) => {
+  console.log(`Server ready at ${url}`);
 });
