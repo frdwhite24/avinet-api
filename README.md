@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/frdwhite24/avinet-back">
-   <img src="assets/avinet_logo.png" width=200>
+   <img src="assets/avinet_logo_rounded.png" width=200>
   </a>
 
   <h1 align="center">AviNet API 🧑‍✈️✈️🛩️🚁</h1>
