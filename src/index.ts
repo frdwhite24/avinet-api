@@ -1,24 +1,9 @@
 import { ApolloServer, gql } from "apollo-server";
-import { connect } from "mongoose";
 
-import { MONGODB_URI } from "./utils/config";
+import { connect } from "./database";
 import User from "./models/user";
 
-console.log("Connecting to", MONGODB_URI);
-
-void connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  useFindAndModify: false,
-  useCreateIndex: true,
-})
-  .then(() => {
-    console.log("Connected to MongoDB");
-  })
-  .catch((error) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    console.log("Error connecting to MongoDB", error.message);
-  });
+connect();
 
 const typeDefs = gql`
   type User {

@@ -34,6 +34,7 @@
     "dotenv": "^8.2.0",
     "graphql": "^15.4.0",
     "mongoose": "^5.11.1",
+    "mongoose-type-email": "^1.1.2",
     "mongoose-unique-validator": "^2.0.3"
   },
   "husky": {
