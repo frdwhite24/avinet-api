@@ -1,31 +1,27 @@
-import { ApolloServer, gql } from "apollo-server";
+import express from "express";
+import "reflect-metadata";
+import { ApolloServer } from "apollo-server-express";
 
 import { connect } from "./database";
-import User from "./models/user";
+import { PORT } from "./utils/config";
+import buildSchema from "./schema/index";
 
-connect();
+const main = async () => {
+  await connect();
 
-const typeDefs = gql`
-  type User {
-    firstName: String!
-    lastName: String!
-    username: String!
-    id: ID!
-  }
+  const app = express();
 
-  type Query {
-    allUsers: [User!]!
-  }
-`;
+  const apolloServer = new ApolloServer({
+    schema: await buildSchema(),
+  });
 
-const resolvers = {
-  Query: {
-    allUsers: () => User.find({}),
-  },
+  apolloServer.applyMiddleware({ app });
+
+  app.listen(PORT, () =>
+    console.log(`Server ready at http://localhost:${PORT}`)
+  );
 };
 
-const server = new ApolloServer({ typeDefs, resolvers });
-
-void server.listen().then(({ url }) => {
-  console.log(`Server ready at ${url}`);
+main().catch((err) => {
+  console.error(err);
 });

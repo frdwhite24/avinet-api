@@ -4,27 +4,20 @@ import { MONGODB_URI } from "./utils/config";
 
 let database: mongoose.Connection;
 
-export const connect = (): void => {
+export const connect = async (): Promise<void> => {
   if (database) {
     return;
   }
 
   console.log("Connecting to", MONGODB_URI);
 
-  void mongoose
-    .connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      useFindAndModify: false,
-      useCreateIndex: true,
-    })
-    .then(() => {
-      console.log("Connected to MongoDB");
-    })
-    .catch((error) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      console.log("Error connecting to MongoDB", error.message);
-    });
+  await mongoose.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    useFindAndModify: false,
+    useCreateIndex: true,
+  });
+  console.log("Connected to MongoDB");
 };
 
 export const disconnect = (): void => {

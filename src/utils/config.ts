@@ -3,15 +3,16 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const isString = (value: any): value is string => {
-  return typeof value === "string" || value instanceof String;
-};
+let MONGODB_URI: string;
+if (process.env.MONGODB_URI && process.env.NODE_ENV !== "test") {
+  MONGODB_URI = process.env.MONGODB_URI;
+} else if (process.env.TEST_MONGODB_URI && process.env.NODE_ENV === "test") {
+  MONGODB_URI = process.env.TEST_MONGODB_URI;
+}
 
-const parseString = (value: any): string => {
-  if (!value || !isString(value)) {
-    throw new Error("Incorrect or missing value: " + String(value));
-  }
-  return value;
-};
+let PORT: number;
+if (process.env.PORT) {
+  PORT = parseInt(process.env.PORT);
+}
 
-export const MONGODB_URI = parseString(process.env.MONGODB_URI);
+export { MONGODB_URI, PORT };
