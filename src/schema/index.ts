@@ -3,4 +3,4 @@ import { buildSchema } from "type-graphql";
 import { UserResolver } from "./users/resolvers";
 
 export default async (): Promise<GraphQLSchema> =>
-  await buildSchema({ resolvers: [UserResolver] });
+  await buildSchema({ resolvers: [UserResolver], validate: false });
