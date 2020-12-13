@@ -12,18 +12,18 @@ export class User {
   @prop({ required: true, unique: true })
   public username!: string;
 
-  @prop({ required: true })
+  @prop({ required: true, minlength: 8 })
   public password!: string;
 
-  @Field()
+  @Field({ nullable: true })
   @prop()
   public firstName?: string;
 
-  @Field()
+  @Field({ nullable: true })
   @prop()
   public lastName?: string;
 
-  @Field()
+  @Field({ nullable: true })
   @prop()
   public emailAddress?: string;
 }
