@@ -1,8 +1,20 @@
 import { prop, getModelForClass } from "@typegoose/typegoose";
 import { Field, ObjectType } from "type-graphql";
+import mongoose from "mongoose";
 
 @ObjectType()
-export class UserClass {
+export class User {
+  @Field(() => String)
+  @prop()
+  _id?: mongoose.Types.ObjectId;
+
+  @Field()
+  @prop({ required: true, unique: true })
+  public username!: string;
+
+  @prop({ required: true })
+  public password!: string;
+
   @Field()
   @prop()
   public firstName?: string;
@@ -13,14 +25,7 @@ export class UserClass {
 
   @Field()
   @prop()
-  public username?: string;
-
-  @Field()
-  @prop({ required: true })
-  public emailAddress!: string;
-
-  // @prop({required: true})
-  // public password!: string;
+  public emailAddress?: string;
 }
 
-export const User = getModelForClass(UserClass);
+export const UserModel = getModelForClass(User);
