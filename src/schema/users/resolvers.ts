@@ -25,7 +25,7 @@ class UsernamePasswordInput {
 @ObjectType()
 class UserError {
   @Field()
-  name!: string;
+  type!: string;
   @Field()
   message!: string;
 }
@@ -61,7 +61,7 @@ export class UserResolver {
       return {
         errors: [
           {
-            name: "No user",
+            type: "No user",
             message: "That username doesn't exist.",
           },
         ],
@@ -79,7 +79,18 @@ export class UserResolver {
     if (currentUser.length !== 0) {
       return {
         errors: [
-          { name: "Create user", message: "That username already exists." },
+          { type: "user error", message: "That username already exists." },
+        ],
+      };
+    }
+
+    if (options.password.length < 8) {
+      return {
+        errors: [
+          {
+            type: "password error",
+            message: "Password length is too short, minimum length is 8 chars.",
+          },
         ],
       };
     }
@@ -94,7 +105,7 @@ export class UserResolver {
       await user.save();
     } catch (error) {
       return {
-        errors: [{ name: "Create user", message: "Could not create a user." }],
+        errors: [{ type: "user error", message: "Could not create a user." }],
       };
     }
 
@@ -110,7 +121,7 @@ export class UserResolver {
       return {
         errors: [
           {
-            name: "No user",
+            type: "user error",
             message: "That username doesn't exist.",
           },
         ],
@@ -121,7 +132,7 @@ export class UserResolver {
       return {
         errors: [
           {
-            name: "Password",
+            type: "password error",
             message: "Incorrect password.",
           },
         ],
