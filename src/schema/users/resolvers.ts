@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-import { hash, verify } from "argon2";
-import { UserModel, User } from "./model";
+import { hash, verify as passwordVerify } from "argon2";
 import {
   Arg,
+  Ctx,
   Field,
   InputType,
   Mutation,
@@ -10,9 +10,11 @@ import {
   Query,
   Resolver,
 } from "type-graphql";
+import { sign } from "jsonwebtoken";
 
 import { JWT_SECRET } from "../../utils/config";
-import { sign } from "jsonwebtoken";
+import { UserModel, User } from "./model";
+import { MyContext } from "../../types";
 
 @InputType()
 class UsernamePasswordInput {
@@ -72,6 +74,15 @@ export class UserResolver {
     };
   }
 
+  @Query(() => UserResponse)
+  whoAmI(@Ctx() { currentUser }: MyContext) {
+    return currentUser
+      ? { user: currentUser }
+      : {
+          errors: [{ type: "user error", message: "No valid token provided." }],
+        };
+  }
+
   @Mutation(() => UserResponse)
   async createUser(@Arg("options") options: UsernamePasswordInput) {
     const currentUser = await UserModel.find({ username: options.username });
@@ -127,7 +138,7 @@ export class UserResolver {
         ],
       };
     }
-    const valid = await verify(user[0].password, options.password);
+    const valid = await passwordVerify(user[0].password, options.password);
     if (!valid) {
       return {
         errors: [
