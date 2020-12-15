@@ -7,10 +7,9 @@
 </p>
 
 This project is the back-end of a social network and online log record for
-pilots. See it as a Strava for people that love flying! AviNet is short for
-Aviation Network.
+pilots. Think Strava for people that love flying!
 
-The back-end is a GraphQL API built in Typescript using Apollo Server.
+The back-end is a GraphQL API built in Typescript.
 
 > This project is still in development and should not be relied upon. For
 > project backlog, see the Projects tab of the repository.
