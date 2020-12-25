@@ -15,6 +15,7 @@ import { sign } from "jsonwebtoken";
 import { JWT_SECRET } from "../../utils/config";
 import { UserModel, User } from "./model";
 import { MyContext } from "../../types";
+import { isError } from "../../utils/typeGuards";
 
 @InputType()
 class UsernamePasswordInput {
@@ -115,9 +116,19 @@ export class UserResolver {
     try {
       await user.save();
     } catch (error) {
-      return {
-        errors: [{ type: "user error", message: "Could not create a user." }],
-      };
+      if (isError(error)) {
+        if (process.env.NODE_ENV !== "production") {
+          return {
+            errors: [{ type: "user error", message: error.message }],
+          };
+        } else {
+          return {
+            errors: [
+              { type: "user error", message: "Could not create a user." },
+            ],
+          };
+        }
+      }
     }
 
     return {
@@ -152,7 +163,7 @@ export class UserResolver {
 
     const userForToken = {
       username: user[0].username,
-      id: user[0]._id,
+      id: user[0]._id as string,
     };
 
     const token = sign(userForToken, JWT_SECRET);
