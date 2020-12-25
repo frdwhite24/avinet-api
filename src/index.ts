@@ -10,7 +10,9 @@ import { UserModel } from "./schema/users/model";
 import { MyToken } from "./types";
 
 export const main = async (): Promise<void> => {
-  await connect();
+  if (process.env.NODE_ENV !== "test") {
+    await connect();
+  }
 
   const app = express();
 
