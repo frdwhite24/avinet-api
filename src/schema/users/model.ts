@@ -5,7 +5,6 @@ import mongoose from "mongoose";
 @ObjectType()
 export class User {
   @Field(() => String)
-  @prop()
   _id?: mongoose.Types.ObjectId;
 
   @Field()
