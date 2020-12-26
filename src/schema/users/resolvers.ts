@@ -137,6 +137,49 @@ export class UserResolver {
   }
 
   @Mutation(() => UserResponse)
+  async deleteUser(
+    @Arg("username") username: string,
+    @Ctx() { currentUser }: MyContext
+  ) {
+    const userToDelete = await UserModel.find({ username: username });
+
+    if (
+      !currentUser ||
+      userToDelete.length === 0 ||
+      userToDelete[0].username !== currentUser.username
+    ) {
+      return {
+        errors: [
+          {
+            type: "authorisation error",
+            message: "Not authorised to carry out this action.",
+          },
+        ],
+      };
+    }
+
+    try {
+      await UserModel.findByIdAndDelete(userToDelete[0]._id);
+    } catch (error) {
+      if (isError(error)) {
+        if (process.env.NODE_ENV !== "production") {
+          return {
+            errors: [{ type: "user error", message: error.message }],
+          };
+        } else {
+          return {
+            errors: [{ type: "user error", message: "Could not delete user." }],
+          };
+        }
+      }
+    }
+
+    return {
+      user: currentUser,
+    };
+  }
+
+  @Mutation(() => UserResponse)
   async loginUser(@Arg("options") options: UsernamePasswordInput) {
     const user = await UserModel.find({ username: options.username });
     if (user.length === 0) {
