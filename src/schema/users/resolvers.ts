@@ -18,6 +18,18 @@ import { MyContext } from "../../types";
 import { isError } from "../../utils/typeGuards";
 
 @InputType()
+class UpdateUserInput {
+  @Field()
+  username!: string;
+  @Field({ nullable: true })
+  emailAddress?: string;
+  @Field({ nullable: true })
+  firstName?: string;
+  @Field({ nullable: true })
+  lastName?: string;
+}
+
+@InputType()
 class UsernamePasswordInput {
   @Field()
   username!: string;
@@ -52,6 +64,7 @@ class UserResponse {
 export class UserResolver {
   @Query(() => UserResponse)
   async getAllUsers() {
+    // TODO: Add auth which requires admin role to carry out this query
     return {
       users: await UserModel.find({}),
     };
@@ -59,12 +72,13 @@ export class UserResolver {
 
   @Query(() => UserResponse)
   async getUser(@Arg("username") username: string) {
+    // TODO: Add auth which requires admin role to carry out this query
     const user = await UserModel.find({ username: username });
     if (user.length === 0) {
       return {
         errors: [
           {
-            type: "No user",
+            type: "user error",
             message: "That username doesn't exist.",
           },
         ],
@@ -175,7 +189,7 @@ export class UserResolver {
     }
 
     return {
-      user: currentUser,
+      user: userToDelete[0],
     };
   }
 
@@ -212,5 +226,38 @@ export class UserResolver {
     const token = sign(userForToken, JWT_SECRET);
 
     return { token, user: user[0] };
+  }
+
+  @Mutation(() => UserResponse)
+  async updateUser(
+    @Arg("options") options: UpdateUserInput,
+    @Ctx() { currentUser }: MyContext
+  ) {
+    const userToUpdate = await UserModel.find({ username: options.username });
+
+    if (
+      !currentUser ||
+      userToUpdate.length === 0 ||
+      userToUpdate[0].username !== currentUser.username
+    ) {
+      return {
+        errors: [
+          {
+            type: "authorisation error",
+            message: "Not authorised to carry out this action.",
+          },
+        ],
+      };
+    }
+
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      userToUpdate[0]._id,
+      { ...options },
+      { new: true }
+    );
+
+    return {
+      user: updatedUser,
+    };
   }
 }
