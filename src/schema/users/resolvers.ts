@@ -345,4 +345,101 @@ export class UserResolver {
 
     return { token, user: updatedUser };
   }
+
+  @Mutation(() => UserResponse)
+  async updatePassword(
+    @Arg("password") currentPassword: string,
+    @Arg("newPassword") newPassword: string,
+    @Ctx() { currentUser }: MyContext
+  ) {
+    if (!currentUser) {
+      return {
+        errors: [
+          {
+            type: "authorisation error",
+            message: "Not authorised to carry out this action.",
+          },
+        ],
+      };
+    }
+
+    const userToUpdate = await UserModel.find({
+      username: currentUser.username,
+    });
+
+    if (userToUpdate.length === 0) {
+      return {
+        errors: [
+          {
+            type: "authorisation error",
+            message: "Invalid token provided.",
+          },
+        ],
+      };
+    }
+
+    const valid = await passwordVerify(
+      userToUpdate[0].password,
+      currentPassword
+    );
+
+    if (!valid) {
+      return {
+        errors: [
+          {
+            type: "password error",
+            message: "Incorrect current password provided.",
+          },
+        ],
+      };
+    }
+
+    if (newPassword.length < 8) {
+      return {
+        errors: [
+          {
+            type: "password error",
+            message:
+              "New password length is too short, minimum length is 8 chars.",
+          },
+        ],
+      };
+    }
+
+    const hashedPassword = await hash(newPassword);
+
+    let updatedUser;
+    try {
+      updatedUser = await UserModel.findByIdAndUpdate(
+        userToUpdate[0]._id,
+        { password: hashedPassword },
+        { new: true }
+      );
+    } catch (error) {
+      if (isError(error)) {
+        if (process.env.NODE_ENV !== "production") {
+          return {
+            errors: [{ type: "user error", message: error.message }],
+          };
+        } else {
+          return {
+            errors: [
+              {
+                type: "user error",
+                message: "Could not update username.",
+              },
+            ],
+          };
+        }
+      }
+    }
+
+    if (!updatedUser) {
+      return {
+        errors: [{ type: "user error", message: "Could not update username." }],
+      };
+    }
+
+    return { user: updatedUser };
+  }
 }
