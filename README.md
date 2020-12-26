@@ -43,6 +43,7 @@ _(Prioritise the below list)_
 - Users get rewards/ rankings based on a metric such as hours flown or number
   of airfields flow into etc. Rank/level/rewards are shown on profile. Maybe
   challenges similar to Duolingo.
+- Users can create and manage groups (could be used for airfields etc.)
 - ?? A user can send messages to other users if they follow each other ??
 - ?? A user can plan their upcoming flights, be given links to key resources
   such as NOTAMs, official weather sources, aviation maps ??
