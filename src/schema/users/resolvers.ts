@@ -250,14 +250,99 @@ export class UserResolver {
       };
     }
 
-    const updatedUser = await UserModel.findByIdAndUpdate(
-      userToUpdate[0]._id,
-      { ...options },
-      { new: true }
-    );
+    let updatedUser;
+    try {
+      updatedUser = await UserModel.findByIdAndUpdate(
+        userToUpdate[0]._id,
+        { ...options },
+        { new: true }
+      );
+    } catch (error) {
+      if (isError(error)) {
+        if (process.env.NODE_ENV !== "production") {
+          return {
+            errors: [{ type: "user error", message: error.message }],
+          };
+        } else {
+          return {
+            errors: [
+              {
+                type: "user error",
+                message: "Could not update user information.",
+              },
+            ],
+          };
+        }
+      }
+    }
 
     return {
       user: updatedUser,
     };
+  }
+
+  @Mutation(() => UserResponse)
+  async updateUsername(
+    @Arg("username") username: string,
+    @Arg("newUsername") newUsername: string,
+    @Ctx() { currentUser }: MyContext
+  ) {
+    const userToUpdate = await UserModel.find({ username });
+
+    if (
+      !currentUser ||
+      userToUpdate.length === 0 ||
+      userToUpdate[0].username !== currentUser.username
+    ) {
+      return {
+        errors: [
+          {
+            type: "authorisation error",
+            message: "Not authorised to carry out this action.",
+          },
+        ],
+      };
+    }
+
+    let updatedUser;
+    try {
+      updatedUser = await UserModel.findByIdAndUpdate(
+        userToUpdate[0]._id,
+        { username: newUsername },
+        { new: true }
+      );
+    } catch (error) {
+      if (isError(error)) {
+        if (process.env.NODE_ENV !== "production") {
+          return {
+            errors: [{ type: "user error", message: error.message }],
+          };
+        } else {
+          return {
+            errors: [
+              {
+                type: "user error",
+                message: "Could not update username.",
+              },
+            ],
+          };
+        }
+      }
+    }
+
+    if (!updatedUser) {
+      return {
+        errors: [{ type: "user error", message: "Could not update username." }],
+      };
+    }
+
+    const userForToken = {
+      username: updatedUser.username,
+      id: updatedUser._id as string,
+    };
+
+    const token = sign(userForToken, JWT_SECRET);
+
+    return { token, user: updatedUser };
   }
 }
