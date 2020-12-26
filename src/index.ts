@@ -9,8 +9,10 @@ import buildSchema from "./schema/index";
 import { UserModel } from "./schema/users/model";
 import { MyToken } from "./types";
 
-const main = async () => {
-  await connect();
+export const main = async (): Promise<void> => {
+  if (process.env.NODE_ENV !== "test") {
+    await connect();
+  }
 
   const app = express();
 
@@ -34,9 +36,11 @@ const main = async () => {
 
   apolloServer.applyMiddleware({ app });
 
-  app.listen(PORT, () =>
-    console.log(`Server ready at http://localhost:${PORT}/graphql`)
-  );
+  if (process.env.NODE_ENV !== "test") {
+    app.listen(PORT, () =>
+      console.log(`Server ready at http://localhost:${PORT}/graphql`)
+    );
+  }
 };
 
 main().catch((err) => {
