@@ -84,7 +84,7 @@ describe("Query", () => {
 
   test("getting one user", async () => {
     // Database setup
-    const users = await generateUsers(1);
+    const users = await generateUsers(2);
     const usersNoPw = users.map(({ password: _password, ...rest }) => rest);
 
     // Request
@@ -118,6 +118,7 @@ describe("Query", () => {
 
     // Database check
     const dbUser = await UserModel.find({ username: users[0].username });
+    expect(dbUser.length).toEqual(1);
     expect(dbUser[0]).toEqual(expect.objectContaining(usersNoPw[0]));
   });
 });
