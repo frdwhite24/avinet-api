@@ -95,4 +95,41 @@ describe("User register resolvers", () => {
     expect(dbUser.length).toEqual(1);
     expect(dbUser[0]).toEqual(expect.objectContaining(usersNoPw[0]));
   });
+
+  test("query who am I", async () => {
+    // Database and user setup
+    const users = await generateUsers(1);
+    const cleanedUsers = users.map(({ password: _password, ...rest }) => rest);
+
+    const modelQuery = await UserModel.find({ username: users[0].username });
+    const currentUser = modelQuery[0];
+
+    // Request;
+    const whoAmI = `
+      query {
+        whoAmI {
+          user {
+            username
+            firstName
+            lastName
+            emailAddress
+          }
+        }
+      }
+    `;
+
+    const response = await graphqlRequest({
+      source: whoAmI,
+      currentUser,
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        whoAmI: {
+          user: cleanedUsers[0],
+        },
+      },
+    });
+  });
 });
