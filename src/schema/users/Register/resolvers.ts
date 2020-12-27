@@ -15,14 +15,18 @@ export class UserRegisterResolver {
   async getAllUsers() {
     // TODO: Add auth which requires admin role to carry out this query
     return {
-      users: await UserModel.find({}),
+      users: await UserModel.find({})
+        .populate("following")
+        .populate("followers"),
     };
   }
 
   @Query(() => UserResponse)
   async getUser(@Arg("username") username: string) {
     // TODO: Add auth which requires admin role to carry out this query
-    const user = await UserModel.find({ username: username });
+    const user = await UserModel.find({ username: username })
+      .populate("following")
+      .populate("followers");
     if (user.length === 0) {
       return {
         errors: [
@@ -169,12 +173,12 @@ export class UserRegisterResolver {
 
     const userForToken = {
       username: user[0].username,
-      id: user[0]._id as string,
+      id: user[0]._id.toString(),
     };
 
     const token = sign(userForToken, JWT_SECRET);
 
-    return { token, user: user[0] };
+    return { token };
   }
 
   @Mutation(() => UserResponse)
@@ -253,13 +257,10 @@ export class UserRegisterResolver {
       };
     }
 
-    let updatedUser;
+    userToUpdate[0].username = newUsername;
+
     try {
-      updatedUser = await UserModel.findByIdAndUpdate(
-        userToUpdate[0]._id,
-        { username: newUsername },
-        { new: true }
-      );
+      await userToUpdate[0].save();
     } catch (error) {
       if (isError(error)) {
         if (process.env.NODE_ENV !== "production") {
@@ -279,20 +280,14 @@ export class UserRegisterResolver {
       }
     }
 
-    if (!updatedUser) {
-      return {
-        errors: [{ type: "user error", message: "Could not update username." }],
-      };
-    }
-
     const userForToken = {
-      username: updatedUser.username,
-      id: updatedUser._id as string,
+      username: userToUpdate[0].username,
+      id: userToUpdate[0]._id.toString(),
     };
 
     const token = sign(userForToken, JWT_SECRET);
 
-    return { token, user: updatedUser };
+    return { token, user: userToUpdate[0] };
   }
 
   @Mutation(() => UserResponse)
