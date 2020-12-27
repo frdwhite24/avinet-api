@@ -1,9 +1,9 @@
 import { hash } from "argon2";
 import faker from "faker";
 
-import { graphqlRequest } from "../../test-utils/graphqlRequest";
-import { connect, disconnect } from "../../database";
-import { UserModel } from "./model";
+import { graphqlRequest } from "../../../test-utils/graphqlRequest";
+import { connect, disconnect } from "../../../database";
+import { UserModel } from "../model";
 
 const generateUsers = async (numUsers: number) => {
   const users = [];

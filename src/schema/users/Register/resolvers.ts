@@ -1,67 +1,16 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { hash, verify as passwordVerify } from "argon2";
-import {
-  Arg,
-  Ctx,
-  Field,
-  InputType,
-  Mutation,
-  ObjectType,
-  Query,
-  Resolver,
-} from "type-graphql";
+import { Arg, Ctx, Mutation, Query, Resolver } from "type-graphql";
 import { sign } from "jsonwebtoken";
 
-import { JWT_SECRET } from "../../utils/config";
-import { UserModel, User } from "./model";
-import { MyContext } from "../../types";
-import { isError } from "../../utils/typeGuards";
-
-@InputType()
-class UpdateUserInput {
-  @Field()
-  username!: string;
-  @Field({ nullable: true })
-  emailAddress?: string;
-  @Field({ nullable: true })
-  firstName?: string;
-  @Field({ nullable: true })
-  lastName?: string;
-}
-
-@InputType()
-class UsernamePasswordInput {
-  @Field()
-  username!: string;
-  @Field()
-  password!: string;
-}
-
-@ObjectType()
-class UserError {
-  @Field()
-  type!: string;
-  @Field()
-  message!: string;
-}
-
-@ObjectType()
-class UserResponse {
-  @Field(() => [UserError], { nullable: true })
-  errors?: Error[];
-
-  @Field(() => User, { nullable: true })
-  user?: User;
-
-  @Field(() => [User], { nullable: true })
-  users?: User[];
-
-  @Field(() => String, { nullable: true })
-  token?: string;
-}
+import { JWT_SECRET } from "../../../utils/config";
+import { UserModel } from "../model";
+import { UpdateUserInput, UsernamePasswordInput, UserResponse } from "../types";
+import { MyContext } from "../../../types";
+import { isError } from "../../../utils/typeGuards";
 
 @Resolver()
-export class UserResolver {
+export class UserRegisterResolver {
   @Query(() => UserResponse)
   async getAllUsers() {
     // TODO: Add auth which requires admin role to carry out this query
