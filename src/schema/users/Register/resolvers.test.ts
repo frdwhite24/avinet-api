@@ -1,39 +1,13 @@
-import { hash } from "argon2";
-import faker from "faker";
-
-import { graphqlRequest } from "../../../test-utils/graphqlRequest";
 import { connect, disconnect } from "../../../database";
+import { graphqlRequest } from "../../../test-utils/graphqlRequest";
+import { generateUsers } from "../../../test-utils/userGen";
 import { UserModel } from "../model";
 
-const generateUsers = async (numUsers: number) => {
-  const users = [];
-  for (let i = 0; i < numUsers; i++) {
-    const user = {
-      username: faker.internet.userName(),
-      password: faker.internet.password(),
-      firstName: faker.name.firstName(),
-      lastName: faker.name.lastName(),
-      emailAddress: faker.internet.email(),
-    };
-
-    users.push(user);
-
-    const newUser = new UserModel({
-      username: user.username,
-      password: await hash(user.password),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      emailAddress: user.emailAddress,
-    });
-
-    await newUser.save();
-  }
-
-  return users;
-};
+beforeAll(async () => {
+  await connect();
+});
 
 beforeEach(async () => {
-  await connect();
   await UserModel.deleteMany({});
 });
 
@@ -41,8 +15,8 @@ afterAll(async () => {
   await disconnect();
 });
 
-describe("Query", () => {
-  test("getting all users", async () => {
+describe("User register resolvers", () => {
+  test("query getting all users", async () => {
     // Database setup
     const users = await generateUsers(3);
     const usersNoPw = users.map(({ password: _password, ...rest }) => rest);
@@ -82,7 +56,7 @@ describe("Query", () => {
     });
   });
 
-  test("getting one user", async () => {
+  test("query getting one user", async () => {
     // Database setup
     const users = await generateUsers(2);
     const usersNoPw = users.map(({ password: _password, ...rest }) => rest);
