@@ -1,5 +1,9 @@
 module.exports = {
+  roots: ["<rootDir>/src"],
   preset: "ts-jest",
   testEnvironment: "node",
-  testPathIgnorePatterns: ["testUtils", "dist"],
+  collectCoverage: true,
+  coverageDirectory: "coverage",
+  testPathIgnorePatterns: ["test-utils", "dist", "/node_modules/*"],
+  verbose: true,
 };

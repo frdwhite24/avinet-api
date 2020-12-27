@@ -1,13 +1,13 @@
-import { prop, getModelForClass } from "@typegoose/typegoose";
-import { Field, ObjectType } from "type-graphql";
+import { prop, getModelForClass, Ref } from "@typegoose/typegoose";
 import mongoose from "mongoose";
+import { Field, ID, ObjectType } from "type-graphql";
 
 @ObjectType()
 export class User {
-  @Field(() => String)
-  _id?: mongoose.Types.ObjectId;
+  @Field(() => ID, { nullable: true })
+  _id!: mongoose.Types.ObjectId;
 
-  @Field()
+  @Field({ nullable: true })
   @prop({ required: true, unique: true })
   public username!: string;
 
@@ -25,6 +25,14 @@ export class User {
   @Field({ nullable: true })
   @prop()
   public emailAddress?: string;
+
+  @Field(() => [User], { nullable: true })
+  @prop({ ref: User })
+  public following?: Ref<User>[];
+
+  @Field(() => [User], { nullable: true })
+  @prop({ ref: User })
+  public followers?: Ref<User>[];
 }
 
 export const UserModel = getModelForClass(User);
