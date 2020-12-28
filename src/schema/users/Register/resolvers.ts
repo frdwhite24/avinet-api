@@ -12,7 +12,9 @@ import {
   existingUserError,
   incorrectPasswordError,
   missingUserError,
+  mutationFailedError,
   notAuthorisedError,
+  passwordTooShortError,
 } from "../../../utils/errorMessages";
 
 @Resolver()
@@ -50,19 +52,11 @@ export class UserRegisterResolver {
 
   @Mutation(() => UserResponse)
   async createUser(@Arg("options") options: UsernamePasswordInput) {
-    const currentUser = await UserModel.findOne({ username: options.username });
-    if (currentUser) return existingUserError();
-
-    if (options.password.length < 8) {
-      return {
-        errors: [
-          {
-            type: "password error",
-            message: "Password length is too short, minimum length is 8 chars.",
-          },
-        ],
-      };
-    }
+    const existingUser = await UserModel.findOne({
+      username: options.username,
+    });
+    if (existingUser) return existingUserError();
+    if (options.password.length < 8) return passwordTooShortError();
 
     const hashedPassword = await hash(options.password);
     const user = new UserModel({
@@ -79,11 +73,7 @@ export class UserRegisterResolver {
             errors: [{ type: "user error", message: error.message }],
           };
         } else {
-          return {
-            errors: [
-              { type: "user error", message: "Could not create a user." },
-            ],
-          };
+          return mutationFailedError("user");
         }
       }
     }
@@ -115,9 +105,7 @@ export class UserRegisterResolver {
             errors: [{ type: "user error", message: error.message }],
           };
         } else {
-          return {
-            errors: [{ type: "user error", message: "Could not delete user." }],
-          };
+          return mutationFailedError("user");
         }
       }
     }
@@ -172,14 +160,7 @@ export class UserRegisterResolver {
             errors: [{ type: "user error", message: error.message }],
           };
         } else {
-          return {
-            errors: [
-              {
-                type: "user error",
-                message: "Could not update user information.",
-              },
-            ],
-          };
+          return mutationFailedError("user");
         }
       }
     }
@@ -214,14 +195,7 @@ export class UserRegisterResolver {
             errors: [{ type: "user error", message: error.message }],
           };
         } else {
-          return {
-            errors: [
-              {
-                type: "user error",
-                message: "Could not update username.",
-              },
-            ],
-          };
+          return mutationFailedError("user");
         }
       }
     }
@@ -252,17 +226,7 @@ export class UserRegisterResolver {
     const valid = await passwordVerify(userToUpdate.password, currentPassword);
     if (!valid) return incorrectPasswordError();
 
-    if (newPassword.length < 8) {
-      return {
-        errors: [
-          {
-            type: "password error",
-            message:
-              "New password length is too short, minimum length is 8 chars.",
-          },
-        ],
-      };
-    }
+    if (newPassword.length < 8) return passwordTooShortError();
 
     const hashedPassword = await hash(newPassword);
 
@@ -280,23 +244,12 @@ export class UserRegisterResolver {
             errors: [{ type: "user error", message: error.message }],
           };
         } else {
-          return {
-            errors: [
-              {
-                type: "user error",
-                message: "Could not update username.",
-              },
-            ],
-          };
+          return mutationFailedError("user");
         }
       }
     }
 
-    if (!updatedUser) {
-      return {
-        errors: [{ type: "user error", message: "Could not update username." }],
-      };
-    }
+    if (!updatedUser) return mutationFailedError("user");
 
     return { user: updatedUser };
   }

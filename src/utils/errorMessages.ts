@@ -37,3 +37,25 @@ export const incorrectPasswordError = () => {
     ],
   };
 };
+
+export const mutationFailedError = (failedOn: string) => {
+  return {
+    errors: [
+      {
+        type: `${failedOn} error`,
+        message: `Could not mutate ${failedOn}.`,
+      },
+    ],
+  };
+};
+
+export const passwordTooShortError = () => {
+  return {
+    errors: [
+      {
+        type: "password error",
+        message: "Password length is too short, minimum length is 8 chars.",
+      },
+    ],
+  };
+};
