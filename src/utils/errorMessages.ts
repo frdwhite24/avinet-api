@@ -12,6 +12,17 @@ export const notAuthorisedError = () => {
   };
 };
 
+export const missingInvalidTokenError = () => {
+  return {
+    errors: [
+      {
+        type: "authorisation error",
+        message: "Missing or invalid token.",
+      },
+    ],
+  };
+};
+
 export const missingUserError = () => {
   return {
     errors: [
@@ -57,6 +68,17 @@ export const passwordTooShortError = () => {
       {
         type: "password error",
         message: `Password length is too short, minimum length is ${MIN_PASSWORD_LENGTH} chars.`,
+      },
+    ],
+  };
+};
+
+export const alreadyFollowingError = () => {
+  return {
+    errors: [
+      {
+        type: "user error",
+        message: "Already following this user.",
       },
     ],
   };

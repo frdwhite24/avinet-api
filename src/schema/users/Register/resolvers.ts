@@ -15,6 +15,7 @@ import {
   mutationFailedError,
   notAuthorisedError,
   passwordTooShortError,
+  missingInvalidTokenError,
 } from "../../../utils/errorMessages";
 import { getAllUsers, getUser } from "../services";
 
@@ -42,9 +43,7 @@ export class UserRegisterResolver {
   async whoAmI(@Ctx() { currentUser }: MyContext) {
     return currentUser
       ? { user: await getUser(currentUser.username) }
-      : {
-          errors: [{ type: "user error", message: "No valid token provided." }],
-        };
+      : missingInvalidTokenError();
   }
 
   @Mutation(() => UserResponse)

@@ -5,6 +5,7 @@ import { UserResponse } from "../types";
 import { MyContext } from "../../../types";
 import { isError } from "../../../utils/typeGuards";
 import {
+  alreadyFollowingError,
   missingUserError,
   mutationFailedError,
   notAuthorisedError,
@@ -54,16 +55,8 @@ export class UserSocialResolvers {
         }
         return;
       })
-    ) {
-      return {
-        errors: [
-          {
-            type: "user error",
-            message: "Already following this user.",
-          },
-        ],
-      };
-    }
+    )
+      return alreadyFollowingError();
 
     userToFollow.followers?.push(currentUser._id);
     currentUser.following?.push(userToFollow._id);
