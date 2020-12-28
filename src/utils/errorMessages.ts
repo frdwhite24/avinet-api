@@ -23,7 +23,7 @@ export const missingUserError = () => {
   };
 };
 
-export const existingUserError = () => {
+export const userExistsError = () => {
   return {
     errors: [{ type: "user error", message: "That username already exists." }],
   };

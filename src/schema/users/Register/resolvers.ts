@@ -9,7 +9,7 @@ import { UpdateUserInput, UsernamePasswordInput, UserResponse } from "../types";
 import { MyContext } from "../../../types";
 import { isError } from "../../../utils/typeGuards";
 import {
-  existingUserError,
+  userExistsError,
   incorrectPasswordError,
   missingUserError,
   mutationFailedError,
@@ -50,7 +50,7 @@ export class UserRegisterResolver {
   @Mutation(() => UserResponse)
   async createUser(@Arg("options") options: UsernamePasswordInput) {
     const existingUser = await getUser(options.username);
-    if (existingUser) return existingUserError();
+    if (existingUser) return userExistsError();
 
     if (options.password.length < MIN_PASSWORD_LENGTH)
       return passwordTooShortError();
