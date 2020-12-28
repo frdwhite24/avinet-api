@@ -3,7 +3,7 @@ import { hash, verify as passwordVerify } from "argon2";
 import { Arg, Ctx, Mutation, Query, Resolver } from "type-graphql";
 import { sign } from "jsonwebtoken";
 
-import { JWT_SECRET } from "../../../utils/config";
+import { JWT_SECRET, MIN_PASSWORD_LENGTH } from "../../../utils/config";
 import { UserModel } from "../model";
 import { UpdateUserInput, UsernamePasswordInput, UserResponse } from "../types";
 import { MyContext } from "../../../types";
@@ -16,6 +16,7 @@ import {
   notAuthorisedError,
   passwordTooShortError,
 } from "../../../utils/errorMessages";
+import { getAllUsers, getUser } from "../services";
 
 @Resolver()
 export class UserRegisterResolver {
@@ -23,18 +24,14 @@ export class UserRegisterResolver {
   async getAllUsers() {
     // TODO: Add auth which requires admin role to carry out this query
     return {
-      users: await UserModel.find({})
-        .populate("following")
-        .populate("followers"),
+      users: await getAllUsers(),
     };
   }
 
   @Query(() => UserResponse)
   async getUser(@Arg("username") username: string) {
     // TODO: Add auth which requires admin role to carry out this query
-    const user = await UserModel.findOne({ username: username })
-      .populate("following")
-      .populate("followers");
+    const user = await getUser(username);
     if (!user) return missingUserError();
     return {
       user,
@@ -42,9 +39,9 @@ export class UserRegisterResolver {
   }
 
   @Query(() => UserResponse)
-  whoAmI(@Ctx() { currentUser }: MyContext) {
+  async whoAmI(@Ctx() { currentUser }: MyContext) {
     return currentUser
-      ? { user: currentUser }
+      ? { user: await getUser(currentUser.username) }
       : {
           errors: [{ type: "user error", message: "No valid token provided." }],
         };
@@ -52,11 +49,11 @@ export class UserRegisterResolver {
 
   @Mutation(() => UserResponse)
   async createUser(@Arg("options") options: UsernamePasswordInput) {
-    const existingUser = await UserModel.findOne({
-      username: options.username,
-    });
+    const existingUser = await getUser(options.username);
     if (existingUser) return existingUserError();
-    if (options.password.length < 8) return passwordTooShortError();
+
+    if (options.password.length < MIN_PASSWORD_LENGTH)
+      return passwordTooShortError();
 
     const hashedPassword = await hash(options.password);
     const user = new UserModel({
@@ -90,7 +87,7 @@ export class UserRegisterResolver {
   ) {
     if (!currentUser) return notAuthorisedError();
 
-    const userToDelete = await UserModel.findOne({ username: username });
+    const userToDelete = await getUser(username);
     if (!userToDelete) return missingUserError();
 
     if (userToDelete.username !== currentUser.username)
@@ -117,7 +114,7 @@ export class UserRegisterResolver {
 
   @Mutation(() => UserResponse)
   async loginUser(@Arg("options") options: UsernamePasswordInput) {
-    const user = await UserModel.findOne({ username: options.username });
+    const user = await getUser(options.username);
     if (!user) return missingUserError();
 
     const valid = await passwordVerify(user.password, options.password);
@@ -127,7 +124,6 @@ export class UserRegisterResolver {
       username: user.username,
       id: user._id.toString(),
     };
-
     const token = sign(userForToken, JWT_SECRET);
 
     return { token };
@@ -139,11 +135,11 @@ export class UserRegisterResolver {
     @Ctx() { currentUser }: MyContext
   ) {
     if (!currentUser) return notAuthorisedError();
-    const userToUpdate = await UserModel.findOne({
-      username: options.username,
-    });
 
-    if (!userToUpdate || userToUpdate.username !== currentUser.username)
+    const userToUpdate = await getUser(options.username);
+    if (!userToUpdate) return missingUserError();
+
+    if (userToUpdate.username !== currentUser.username)
       return notAuthorisedError();
 
     let updatedUser;
@@ -178,7 +174,7 @@ export class UserRegisterResolver {
   ) {
     if (!currentUser) return notAuthorisedError();
 
-    const userToUpdate = await UserModel.findOne({ username });
+    const userToUpdate = await getUser(username);
     if (!userToUpdate) return missingUserError();
 
     if (userToUpdate.username !== currentUser.username)
@@ -218,22 +214,18 @@ export class UserRegisterResolver {
   ) {
     if (!currentUser) return notAuthorisedError();
 
-    const userToUpdate = await UserModel.findOne({
-      username: currentUser.username,
-    });
-    if (!userToUpdate) return missingUserError();
-
-    const valid = await passwordVerify(userToUpdate.password, currentPassword);
+    const valid = await passwordVerify(currentUser.password, currentPassword);
     if (!valid) return incorrectPasswordError();
 
-    if (newPassword.length < 8) return passwordTooShortError();
+    if (newPassword.length < MIN_PASSWORD_LENGTH)
+      return passwordTooShortError();
 
     const hashedPassword = await hash(newPassword);
 
     let updatedUser;
     try {
       updatedUser = await UserModel.findByIdAndUpdate(
-        userToUpdate._id,
+        currentUser._id,
         { password: hashedPassword },
         { new: true }
       );

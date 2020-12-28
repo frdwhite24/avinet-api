@@ -15,4 +15,6 @@ const JWT_SECRET: string = process.env.JWT_SECRET
   ? process.env.JWT_SECRET
   : "badsecret";
 
-export { MONGODB_URI, PORT, JWT_SECRET };
+const MIN_PASSWORD_LENGTH = 8;
+
+export { MONGODB_URI, PORT, JWT_SECRET, MIN_PASSWORD_LENGTH };

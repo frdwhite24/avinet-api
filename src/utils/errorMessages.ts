@@ -1,3 +1,5 @@
+import { MIN_PASSWORD_LENGTH } from "./config";
+
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 export const notAuthorisedError = () => {
   return {
@@ -54,7 +56,7 @@ export const passwordTooShortError = () => {
     errors: [
       {
         type: "password error",
-        message: "Password length is too short, minimum length is 8 chars.",
+        message: `Password length is too short, minimum length is ${MIN_PASSWORD_LENGTH} chars.`,
       },
     ],
   };

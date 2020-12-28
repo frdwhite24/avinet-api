@@ -3,12 +3,13 @@ import { Arg, Ctx, Mutation, Query, Resolver } from "type-graphql";
 
 import { UserResponse } from "../types";
 import { MyContext } from "../../../types";
-import { UserModel } from "../model";
 import { isError } from "../../../utils/typeGuards";
 import {
   missingUserError,
+  mutationFailedError,
   notAuthorisedError,
 } from "../../../utils/errorMessages";
+import { getUser } from "../services";
 
 @Resolver()
 export class UserSocialResolvers {
@@ -16,14 +17,11 @@ export class UserSocialResolvers {
   async getFollowers(@Ctx() { currentUser }: MyContext) {
     if (!currentUser) return notAuthorisedError();
 
-    const user = await UserModel.find({
-      username: currentUser.username,
-    }).populate("followers");
-
-    if (user.length === 0) return missingUserError();
+    const user = await getUser(currentUser.username);
+    if (!user) return missingUserError();
 
     return {
-      users: user[0].followers,
+      users: user.followers,
     };
   }
 
@@ -31,14 +29,11 @@ export class UserSocialResolvers {
   async getFollowing(@Ctx() { currentUser }: MyContext) {
     if (!currentUser) return notAuthorisedError();
 
-    const user = await UserModel.find({
-      username: currentUser.username,
-    }).populate("following");
-
-    if (user.length === 0) return missingUserError();
+    const user = await getUser(currentUser.username);
+    if (!user) return missingUserError();
 
     return {
-      users: user[0].following,
+      users: user.following,
     };
   }
 
@@ -49,20 +44,13 @@ export class UserSocialResolvers {
   ) {
     if (!currentUser) return notAuthorisedError();
 
-    const userToFollow = await UserModel.find({
-      username: username,
-    });
-    const userFollowing = await UserModel.find({
-      username: currentUser.username,
-    });
-
-    if (userToFollow.length === 0 || userFollowing.length === 0)
-      return missingUserError();
+    const userToFollow = await getUser(username);
+    if (!userToFollow) return missingUserError();
 
     if (
-      userToFollow[0].followers?.find((follower) => {
+      userToFollow.followers?.find((follower) => {
         if (follower) {
-          return follower.toString() === userFollowing[0]._id.toString();
+          return follower.toString() === currentUser._id.toString();
         }
         return;
       })
@@ -77,12 +65,12 @@ export class UserSocialResolvers {
       };
     }
 
-    userToFollow[0].followers?.push(userFollowing[0]._id);
-    userFollowing[0].following?.push(userToFollow[0]._id);
+    userToFollow.followers?.push(currentUser._id);
+    currentUser.following?.push(userToFollow._id);
 
     try {
-      await userToFollow[0].save();
-      await userFollowing[0].save();
+      await userToFollow.save();
+      await currentUser.save();
     } catch (error) {
       if (isError(error)) {
         if (process.env.NODE_ENV !== "production") {
@@ -90,14 +78,7 @@ export class UserSocialResolvers {
             errors: [{ type: "user error", message: error.message }],
           };
         } else {
-          return {
-            errors: [
-              {
-                type: "user error",
-                message: "Could not update user information.",
-              },
-            ],
-          };
+          return mutationFailedError("user");
         }
       }
     }
@@ -106,16 +87,11 @@ export class UserSocialResolvers {
     // being able to repopulate a saved document and so an extra db query
     // must be carried out to send in the response
     // TODO: Find a better way to do this rather than carry out extra DB query
-    const newUserFollowing = await UserModel.find({
-      username: userFollowing[0].username,
-    })
-      .populate("following")
-      .populate("followers");
-
-    if (newUserFollowing.length === 0) return missingUserError();
+    const newUserFollowing = await getUser(currentUser.username);
+    if (!newUserFollowing) return missingUserError();
 
     return {
-      user: newUserFollowing[0],
+      user: newUserFollowing,
     };
   }
 }
