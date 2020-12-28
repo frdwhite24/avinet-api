@@ -27,11 +27,11 @@ export class User {
   public emailAddress?: string;
 
   @Field(() => [User], { nullable: true })
-  @prop({ ref: User })
+  @prop({ ref: User, default: [] })
   public following?: Ref<User>[];
 
   @Field(() => [User], { nullable: true })
-  @prop({ ref: User })
+  @prop({ ref: User, default: [] })
   public followers?: Ref<User>[];
 }
 
