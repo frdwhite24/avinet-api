@@ -220,3 +220,5 @@ describe("User social resolvers", () => {
     expect(followedUser?.followers).toEqual([followingUser?._id]);
   });
 });
+
+// TODO: add test for returning error message if already following

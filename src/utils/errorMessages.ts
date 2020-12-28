@@ -83,3 +83,14 @@ export const alreadyFollowingError = () => {
     ],
   };
 };
+
+export const notFollowingError = () => {
+  return {
+    errors: [
+      {
+        type: "user error",
+        message: "Not following this user.",
+      },
+    ],
+  };
+};
