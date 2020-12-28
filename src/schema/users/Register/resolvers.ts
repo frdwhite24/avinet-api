@@ -8,6 +8,12 @@ import { UserModel } from "../model";
 import { UpdateUserInput, UsernamePasswordInput, UserResponse } from "../types";
 import { MyContext } from "../../../types";
 import { isError } from "../../../utils/typeGuards";
+import {
+  existingUserError,
+  incorrectPasswordError,
+  missingUserError,
+  notAuthorisedError,
+} from "../../../utils/errorMessages";
 
 @Resolver()
 export class UserRegisterResolver {
@@ -24,21 +30,12 @@ export class UserRegisterResolver {
   @Query(() => UserResponse)
   async getUser(@Arg("username") username: string) {
     // TODO: Add auth which requires admin role to carry out this query
-    const user = await UserModel.find({ username: username })
+    const user = await UserModel.findOne({ username: username })
       .populate("following")
       .populate("followers");
-    if (user.length === 0) {
-      return {
-        errors: [
-          {
-            type: "user error",
-            message: "That username doesn't exist.",
-          },
-        ],
-      };
-    }
+    if (!user) return missingUserError();
     return {
-      user: user[0],
+      user,
     };
   }
 
@@ -53,15 +50,8 @@ export class UserRegisterResolver {
 
   @Mutation(() => UserResponse)
   async createUser(@Arg("options") options: UsernamePasswordInput) {
-    const currentUser = await UserModel.find({ username: options.username });
-
-    if (currentUser.length !== 0) {
-      return {
-        errors: [
-          { type: "user error", message: "That username already exists." },
-        ],
-      };
-    }
+    const currentUser = await UserModel.findOne({ username: options.username });
+    if (currentUser) return existingUserError();
 
     if (options.password.length < 8) {
       return {
@@ -108,25 +98,16 @@ export class UserRegisterResolver {
     @Arg("username") username: string,
     @Ctx() { currentUser }: MyContext
   ) {
-    const userToDelete = await UserModel.find({ username: username });
+    if (!currentUser) return notAuthorisedError();
 
-    if (
-      !currentUser ||
-      userToDelete.length === 0 ||
-      userToDelete[0].username !== currentUser.username
-    ) {
-      return {
-        errors: [
-          {
-            type: "authorisation error",
-            message: "Not authorised to carry out this action.",
-          },
-        ],
-      };
-    }
+    const userToDelete = await UserModel.findOne({ username: username });
+    if (!userToDelete) return missingUserError();
+
+    if (userToDelete.username !== currentUser.username)
+      return notAuthorisedError();
 
     try {
-      await UserModel.findByIdAndDelete(userToDelete[0]._id);
+      await UserModel.findByIdAndDelete(userToDelete._id);
     } catch (error) {
       if (isError(error)) {
         if (process.env.NODE_ENV !== "production") {
@@ -142,38 +123,21 @@ export class UserRegisterResolver {
     }
 
     return {
-      user: userToDelete[0],
+      user: userToDelete,
     };
   }
 
   @Mutation(() => UserResponse)
   async loginUser(@Arg("options") options: UsernamePasswordInput) {
-    const user = await UserModel.find({ username: options.username });
-    if (user.length === 0) {
-      return {
-        errors: [
-          {
-            type: "user error",
-            message: "That username doesn't exist.",
-          },
-        ],
-      };
-    }
-    const valid = await passwordVerify(user[0].password, options.password);
-    if (!valid) {
-      return {
-        errors: [
-          {
-            type: "password error",
-            message: "Incorrect password.",
-          },
-        ],
-      };
-    }
+    const user = await UserModel.findOne({ username: options.username });
+    if (!user) return missingUserError();
+
+    const valid = await passwordVerify(user.password, options.password);
+    if (!valid) return incorrectPasswordError();
 
     const userForToken = {
-      username: user[0].username,
-      id: user[0]._id.toString(),
+      username: user.username,
+      id: user._id.toString(),
     };
 
     const token = sign(userForToken, JWT_SECRET);
@@ -186,27 +150,18 @@ export class UserRegisterResolver {
     @Arg("options") options: UpdateUserInput,
     @Ctx() { currentUser }: MyContext
   ) {
-    const userToUpdate = await UserModel.find({ username: options.username });
+    if (!currentUser) return notAuthorisedError();
+    const userToUpdate = await UserModel.findOne({
+      username: options.username,
+    });
 
-    if (
-      !currentUser ||
-      userToUpdate.length === 0 ||
-      userToUpdate[0].username !== currentUser.username
-    ) {
-      return {
-        errors: [
-          {
-            type: "authorisation error",
-            message: "Not authorised to carry out this action.",
-          },
-        ],
-      };
-    }
+    if (!userToUpdate || userToUpdate.username !== currentUser.username)
+      return notAuthorisedError();
 
     let updatedUser;
     try {
       updatedUser = await UserModel.findByIdAndUpdate(
-        userToUpdate[0]._id,
+        userToUpdate._id,
         { ...options },
         { new: true }
       );
@@ -240,27 +195,18 @@ export class UserRegisterResolver {
     @Arg("newUsername") newUsername: string,
     @Ctx() { currentUser }: MyContext
   ) {
-    const userToUpdate = await UserModel.find({ username });
+    if (!currentUser) return notAuthorisedError();
 
-    if (
-      !currentUser ||
-      userToUpdate.length === 0 ||
-      userToUpdate[0].username !== currentUser.username
-    ) {
-      return {
-        errors: [
-          {
-            type: "authorisation error",
-            message: "Not authorised to carry out this action.",
-          },
-        ],
-      };
-    }
+    const userToUpdate = await UserModel.findOne({ username });
+    if (!userToUpdate) return missingUserError();
 
-    userToUpdate[0].username = newUsername;
+    if (userToUpdate.username !== currentUser.username)
+      return notAuthorisedError();
+
+    userToUpdate.username = newUsername;
 
     try {
-      await userToUpdate[0].save();
+      await userToUpdate.save();
     } catch (error) {
       if (isError(error)) {
         if (process.env.NODE_ENV !== "production") {
@@ -281,13 +227,13 @@ export class UserRegisterResolver {
     }
 
     const userForToken = {
-      username: userToUpdate[0].username,
-      id: userToUpdate[0]._id.toString(),
+      username: userToUpdate.username,
+      id: userToUpdate._id.toString(),
     };
 
     const token = sign(userForToken, JWT_SECRET);
 
-    return { token, user: userToUpdate[0] };
+    return { token, user: userToUpdate };
   }
 
   @Mutation(() => UserResponse)
@@ -296,47 +242,15 @@ export class UserRegisterResolver {
     @Arg("newPassword") newPassword: string,
     @Ctx() { currentUser }: MyContext
   ) {
-    if (!currentUser) {
-      return {
-        errors: [
-          {
-            type: "authorisation error",
-            message: "Not authorised to carry out this action.",
-          },
-        ],
-      };
-    }
+    if (!currentUser) return notAuthorisedError();
 
-    const userToUpdate = await UserModel.find({
+    const userToUpdate = await UserModel.findOne({
       username: currentUser.username,
     });
+    if (!userToUpdate) return missingUserError();
 
-    if (userToUpdate.length === 0) {
-      return {
-        errors: [
-          {
-            type: "authorisation error",
-            message: "Invalid token provided.",
-          },
-        ],
-      };
-    }
-
-    const valid = await passwordVerify(
-      userToUpdate[0].password,
-      currentPassword
-    );
-
-    if (!valid) {
-      return {
-        errors: [
-          {
-            type: "password error",
-            message: "Incorrect current password provided.",
-          },
-        ],
-      };
-    }
+    const valid = await passwordVerify(userToUpdate.password, currentPassword);
+    if (!valid) return incorrectPasswordError();
 
     if (newPassword.length < 8) {
       return {
@@ -355,7 +269,7 @@ export class UserRegisterResolver {
     let updatedUser;
     try {
       updatedUser = await UserModel.findByIdAndUpdate(
-        userToUpdate[0]._id,
+        userToUpdate._id,
         { password: hashedPassword },
         { new: true }
       );

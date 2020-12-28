@@ -5,38 +5,22 @@ import { UserResponse } from "../types";
 import { MyContext } from "../../../types";
 import { UserModel } from "../model";
 import { isError } from "../../../utils/typeGuards";
-
-const notAuthorised = () => {
-  return {
-    errors: [
-      {
-        type: "authorisation error",
-        message: "Not authorised to carry out this action.",
-      },
-    ],
-  };
-};
+import {
+  missingUserError,
+  notAuthorisedError,
+} from "../../../utils/errorMessages";
 
 @Resolver()
 export class UserSocialResolvers {
   @Query(() => UserResponse)
   async getFollowers(@Ctx() { currentUser }: MyContext) {
-    if (!currentUser) return notAuthorised();
+    if (!currentUser) return notAuthorisedError();
 
     const user = await UserModel.find({
       username: currentUser.username,
     }).populate("followers");
 
-    if (user.length === 0) {
-      return {
-        errors: [
-          {
-            type: "user error",
-            message: "User doesn't exist.",
-          },
-        ],
-      };
-    }
+    if (user.length === 0) return missingUserError();
 
     return {
       users: user[0].followers,
@@ -45,22 +29,13 @@ export class UserSocialResolvers {
 
   @Query(() => UserResponse)
   async getFollowing(@Ctx() { currentUser }: MyContext) {
-    if (!currentUser) return notAuthorised();
+    if (!currentUser) return notAuthorisedError();
 
     const user = await UserModel.find({
       username: currentUser.username,
     }).populate("following");
 
-    if (user.length === 0) {
-      return {
-        errors: [
-          {
-            type: "user error",
-            message: "User doesn't exist.",
-          },
-        ],
-      };
-    }
+    if (user.length === 0) return missingUserError();
 
     return {
       users: user[0].following,
@@ -72,7 +47,7 @@ export class UserSocialResolvers {
     @Arg("username") username: string,
     @Ctx() { currentUser }: MyContext
   ) {
-    if (!currentUser) return notAuthorised();
+    if (!currentUser) return notAuthorisedError();
 
     const userToFollow = await UserModel.find({
       username: username,
@@ -81,16 +56,8 @@ export class UserSocialResolvers {
       username: currentUser.username,
     });
 
-    if (userToFollow.length === 0 || userFollowing.length === 0) {
-      return {
-        errors: [
-          {
-            type: "user error",
-            message: "Username doesn't exist.",
-          },
-        ],
-      };
-    }
+    if (userToFollow.length === 0 || userFollowing.length === 0)
+      return missingUserError();
 
     if (
       userToFollow[0].followers?.find((follower) => {
@@ -145,17 +112,7 @@ export class UserSocialResolvers {
       .populate("following")
       .populate("followers");
 
-    if (newUserFollowing.length === 0) {
-      return {
-        errors: [
-          {
-            type: "user error",
-            message:
-              "Unable to fetch updated followers, please refresh the page.",
-          },
-        ],
-      };
-    }
+    if (newUserFollowing.length === 0) return missingUserError();
 
     return {
       user: newUserFollowing[0],
