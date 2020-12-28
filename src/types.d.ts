@@ -1,8 +1,9 @@
+import { DocumentType } from "@typegoose/typegoose";
 import { Types } from "mongoose";
 import { User } from "./schema/users/model";
 
 type MyContext = {
-  currentUser: User | null;
+  currentUser: DocumentType<User> | null;
 };
 
 type MyToken = {

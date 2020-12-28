@@ -1,4 +1,5 @@
 import { Field, InputType, ObjectType } from "type-graphql/dist/decorators";
+import { ResponseError } from "../types";
 
 import { User } from "./model";
 
@@ -23,16 +24,8 @@ export class UsernamePasswordInput {
 }
 
 @ObjectType()
-export class UserError {
-  @Field()
-  type!: string;
-  @Field()
-  message!: string;
-}
-
-@ObjectType()
 export class UserResponse {
-  @Field(() => [UserError], { nullable: true })
+  @Field(() => [ResponseError], { nullable: true })
   errors?: Error[];
 
   @Field(() => User, { nullable: true })

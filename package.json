@@ -6,6 +6,7 @@
   "scripts": {
     "lint": "eslint --ext .ts",
     "test": "CI=true NODE_ENV=test jest --colors --runInBand --detectOpenHandles",
+    "test:coverage": "CI=true NODE_ENV=test jest --colors --runInBand --collectCoverage",
     "test:staged": "CI=true NODE_ENV=test jest --findRelatedTests --runInBand",
     "dev": "NODE_ENV=development ts-node-dev src/index.ts",
     "build": "tsc",
