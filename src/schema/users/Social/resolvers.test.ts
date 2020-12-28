@@ -18,32 +18,14 @@ afterAll(async () => {
 describe("User social resolvers", () => {
   test("query getting followers", async () => {
     // Database and user setup
-    const users = await generateUsers(2);
-    const cleanedUsers = users.map(({ password: _password, ...rest }) => rest);
+    const { dbUsers, cleanedUsers } = await generateUsers(2);
 
-    const allUsers = await UserModel.find({});
-    const firstUser = allUsers[0];
-    const secondUser = allUsers[1];
+    dbUsers[0].following.push(dbUsers[1]._id);
+    dbUsers[1].followers.push(dbUsers[0]._id);
+    await dbUsers[0].save();
+    await dbUsers[1].save();
 
     // Request;
-    const followUser = `
-      mutation followUser($username: String!) {
-        followUser(username: $username) {
-          user {
-            username
-            firstName
-            lastName
-            emailAddress
-            following {
-              username
-            }
-            followers {
-              username
-            }
-          }
-        }
-      }
-    `;
     const getFollowers = `
       query {
         getFollowers {
@@ -56,18 +38,9 @@ describe("User social resolvers", () => {
         }
       }
     `;
-
-    await graphqlRequest({
-      source: followUser,
-      variableValues: {
-        username: secondUser.username,
-      },
-      currentUser: firstUser,
-    });
-
     const response = await graphqlRequest({
       source: getFollowers,
-      currentUser: secondUser,
+      currentUser: dbUsers[1],
     });
 
     // Response check
@@ -78,43 +51,18 @@ describe("User social resolvers", () => {
         },
       },
     });
-
-    // Database check
-    const updatedUsers = await UserModel.find({}).lean();
-    const followedUser = updatedUsers.find(
-      (user) => user.username === secondUser.username
-    );
-    expect(followedUser?.followers).toEqual([firstUser._id]);
   });
 
   test("query getting following", async () => {
     // Database and user setup
-    const users = await generateUsers(2);
-    const cleanedUsers = users.map(({ password: _password, ...rest }) => rest);
+    const { dbUsers, cleanedUsers } = await generateUsers(2);
 
-    const allUsers = await UserModel.find({});
-    const firstUser = allUsers[0];
-    const secondUser = allUsers[1];
+    dbUsers[0].following.push(dbUsers[1]._id);
+    dbUsers[1].followers.push(dbUsers[0]._id);
+    await dbUsers[0].save();
+    await dbUsers[1].save();
 
     // Request;
-    const followUser = `
-      mutation followUser($username: String!) {
-        followUser(username: $username) {
-          user {
-            username
-            firstName
-            lastName
-            emailAddress
-            following {
-              username
-            }
-            followers {
-              username
-            }
-          }
-        }
-      }
-    `;
     const getFollowing = `
       query {
         getFollowing {
@@ -127,18 +75,9 @@ describe("User social resolvers", () => {
         }
       }
     `;
-
-    await graphqlRequest({
-      source: followUser,
-      variableValues: {
-        username: secondUser.username,
-      },
-      currentUser: firstUser,
-    });
-
     const response = await graphqlRequest({
       source: getFollowing,
-      currentUser: firstUser,
+      currentUser: dbUsers[0],
     });
 
     // Response check
@@ -149,29 +88,13 @@ describe("User social resolvers", () => {
         },
       },
     });
-
-    // Database check
-    const updatedUsers = await UserModel.find({}).lean();
-    const followedUser = updatedUsers.find(
-      (user) => user.username === firstUser.username
-    );
-    expect(followedUser?.following).toEqual([secondUser._id]);
   });
 
   test("mutation following a user", async () => {
     // Database and user setup
-    const users = await generateUsers(2);
-    const cleanedUsers = users.map(({ password: _password, ...rest }) => rest);
+    const { dbUsers, cleanedUsers } = await generateUsers(2);
 
-    const modelQuery = await UserModel.find({ username: users[0].username });
-    const currentUser = modelQuery[0];
-    const userWithUpdate = {
-      ...cleanedUsers[0],
-      following: [{ username: users[1].username }],
-      followers: [],
-    };
-
-    // Request;
+    // Request
     const followUser = `
       mutation followUser($username: String!) {
         followUser(username: $username) {
@@ -190,20 +113,23 @@ describe("User social resolvers", () => {
         }
       }
     `;
-
     const response = await graphqlRequest({
       source: followUser,
       variableValues: {
-        username: users[1].username,
+        username: cleanedUsers[1].username,
       },
-      currentUser,
+      currentUser: dbUsers[0],
     });
 
     // Response check
     expect(response).toMatchObject({
       data: {
         followUser: {
-          user: userWithUpdate,
+          user: {
+            ...cleanedUsers[0],
+            following: [{ username: cleanedUsers[1].username }],
+            followers: [],
+          },
         },
       },
     });
@@ -211,12 +137,153 @@ describe("User social resolvers", () => {
     // Database check
     const allUsers = await UserModel.find({}).lean();
     const followingUser = allUsers.find(
-      (user) => user.username === users[0].username
+      (user) => user.username === cleanedUsers[0].username
     );
     const followedUser = allUsers.find(
-      (user) => user.username === users[1].username
+      (user) => user.username === cleanedUsers[1].username
     );
     expect(followingUser?.following).toEqual([followedUser?._id]);
     expect(followedUser?.followers).toEqual([followingUser?._id]);
+  });
+
+  test("mutation following a user fails", async () => {
+    // Database and user setup
+    const { dbUsers, cleanedUsers } = await generateUsers(2);
+
+    dbUsers[0].following.push(dbUsers[1]._id);
+    dbUsers[1].followers.push(dbUsers[0]._id);
+    await dbUsers[0].save();
+    await dbUsers[1].save();
+
+    // Request
+    const followUser = `
+      mutation followUser($username: String!) {
+        followUser(username: $username) {
+          errors {
+            message
+          }
+        }
+      }
+    `;
+    const response = await graphqlRequest({
+      source: followUser,
+      variableValues: {
+        username: cleanedUsers[1].username,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        followUser: {
+          errors: [{ message: "Already following this user." }],
+        },
+      },
+    });
+
+    // Database check
+    const allUsers = await UserModel.find({}).lean();
+    const followingUser = allUsers.find(
+      (user) => user.username === cleanedUsers[0].username
+    );
+    const followedUser = allUsers.find(
+      (user) => user.username === cleanedUsers[1].username
+    );
+    expect(followingUser?.following).toEqual([followedUser?._id]);
+    expect(followedUser?.followers).toEqual([followingUser?._id]);
+  });
+
+  test("mutation unfollowing a user", async () => {
+    // Database and user setup
+    const { dbUsers, cleanedUsers } = await generateUsers(2);
+
+    dbUsers[0].following.push(dbUsers[1]._id);
+    dbUsers[1].followers.push(dbUsers[0]._id);
+    await dbUsers[0].save();
+    await dbUsers[1].save();
+
+    // Request
+    const unfollowUser = `
+      mutation unfollowUser($username: String!) {
+        unfollowUser(username: $username) {
+          user {
+            username
+            firstName
+            lastName
+            emailAddress
+            following {
+              username
+            }
+            followers {
+              username
+            }
+          }
+        }
+      }
+    `;
+    const response = await graphqlRequest({
+      source: unfollowUser,
+      variableValues: {
+        username: cleanedUsers[1].username,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        unfollowUser: {
+          user: {
+            ...cleanedUsers[0],
+            following: [],
+            followers: [],
+          },
+        },
+      },
+    });
+
+    // Database check
+    const allUsers = await UserModel.find({}).lean();
+    const followingUser = allUsers.find(
+      (user) => user.username === cleanedUsers[0].username
+    );
+    const followedUser = allUsers.find(
+      (user) => user.username === cleanedUsers[1].username
+    );
+    expect(followingUser?.following).toEqual([]);
+    expect(followedUser?.followers).toEqual([]);
+  });
+
+  test("mutation unfollowing a user fails", async () => {
+    // Database and user setup
+    const { dbUsers, cleanedUsers } = await generateUsers(2);
+
+    // Request
+    const unfollowUser = `
+      mutation unfollowUser($username: String!) {
+        unfollowUser(username: $username) {
+          errors {
+            message
+          }
+        }
+      }
+    `;
+    const response = await graphqlRequest({
+      source: unfollowUser,
+      variableValues: {
+        username: cleanedUsers[1].username,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        unfollowUser: {
+          errors: [{ message: "Not following this user." }],
+        },
+      },
+    });
   });
 });

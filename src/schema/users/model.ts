@@ -28,11 +28,11 @@ export class User {
 
   @Field(() => [User], { nullable: true })
   @prop({ ref: User, default: [] })
-  public following?: Ref<User>[];
+  public following!: Ref<User>[];
 
   @Field(() => [User], { nullable: true })
   @prop({ ref: User, default: [] })
-  public followers?: Ref<User>[];
+  public followers!: Ref<User>[];
 }
 
 export const UserModel = getModelForClass(User);

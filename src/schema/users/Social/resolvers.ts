@@ -9,6 +9,7 @@ import {
   missingUserError,
   mutationFailedError,
   notAuthorisedError,
+  notFollowingError,
 } from "../../../utils/errorMessages";
 import { getUser } from "../services";
 
@@ -45,15 +46,15 @@ export class UserSocialResolvers {
   ) {
     if (!currentUser) return notAuthorisedError();
 
-    const userToFollow = await getUser(username);
+    const userToFollow = await getUser(username, false);
     if (!userToFollow) return missingUserError();
 
     if (
       userToFollow.followers?.find((follower) => {
-        if (follower) {
-          return follower.toString() === currentUser._id.toString();
+        if (!follower) {
+          return;
         }
-        return;
+        return follower.toString() === currentUser._id.toString();
       })
     )
       return alreadyFollowingError();
@@ -85,6 +86,71 @@ export class UserSocialResolvers {
 
     return {
       user: newUserFollowing,
+    };
+  }
+
+  @Mutation(() => UserResponse)
+  async unfollowUser(
+    @Arg("username") username: string,
+    @Ctx() { currentUser }: MyContext
+  ) {
+    if (!currentUser) return notAuthorisedError();
+
+    const userToUnfollow = await getUser(username, false);
+    if (!userToUnfollow) return missingUserError();
+
+    // TODO: clean up this find block
+    if (
+      !userToUnfollow.followers.find((follower) => {
+        if (!follower) {
+          return;
+        }
+        return follower.toString() === currentUser._id.toString();
+      })
+    )
+      return notFollowingError();
+
+    // Filter out userId, as per above TODO, this needs to be handled cleaner,
+    // the problem is because the followers and following array can be [] and
+    // so the variable within array methods can be undefined requiring the
+    // extra if statement
+    userToUnfollow.followers = userToUnfollow.followers.filter((userId) => {
+      if (userId) {
+        return userId.toString() !== currentUser._id.toString();
+      }
+      return;
+    });
+    currentUser.following = currentUser.following.filter((userId) => {
+      if (userId) {
+        return userId.toString() !== userToUnfollow._id.toString();
+      }
+      return;
+    });
+
+    try {
+      await userToUnfollow.save();
+      await currentUser.save();
+    } catch (error) {
+      if (isError(error)) {
+        if (process.env.NODE_ENV !== "production") {
+          return {
+            errors: [{ type: "user error", message: error.message }],
+          };
+        } else {
+          return mutationFailedError("user");
+        }
+      }
+    }
+
+    // This should be improved, it's a long standing issue with mongoose not
+    // being able to repopulate a saved document and so an extra db query
+    // must be carried out to send in the response object
+    // TODO: Find a better way to do this rather than carry out extra DB query
+    const updatedCurrentUser = await getUser(currentUser.username);
+    if (!updatedCurrentUser) return missingUserError();
+
+    return {
+      user: updatedCurrentUser,
     };
   }
 }

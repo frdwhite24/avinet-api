@@ -1,3 +1,4 @@
+import { DocumentType } from "@typegoose/typegoose";
 import { ExecutionResult, graphql, GraphQLSchema } from "graphql";
 import { Maybe } from "graphql/jsutils/Maybe";
 
@@ -8,7 +9,7 @@ interface Options {
   source: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   variableValues?: Maybe<{ [key: string]: any }>;
-  currentUser?: User;
+  currentUser?: DocumentType<User> | null;
 }
 
 let schema: GraphQLSchema;

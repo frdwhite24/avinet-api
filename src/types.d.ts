@@ -7,6 +7,6 @@ type MyContext = {
 };
 
 type MyToken = {
-  id: Types.ObjectId | undefined;
+  id: Types.ObjectId;
   username: string;
 };
