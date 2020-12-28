@@ -1,28 +1,78 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-import { Arg, Ctx, Mutation, Resolver } from "type-graphql";
+import { Arg, Ctx, Mutation, Query, Resolver } from "type-graphql";
 
 import { UserResponse } from "../types";
 import { MyContext } from "../../../types";
 import { UserModel } from "../model";
 import { isError } from "../../../utils/typeGuards";
 
+const notAuthorised = () => {
+  return {
+    errors: [
+      {
+        type: "authorisation error",
+        message: "Not authorised to carry out this action.",
+      },
+    ],
+  };
+};
+
 @Resolver()
 export class UserSocialResolvers {
+  @Query(() => UserResponse)
+  async getFollowers(@Ctx() { currentUser }: MyContext) {
+    if (!currentUser) return notAuthorised();
+
+    const user = await UserModel.find({
+      username: currentUser.username,
+    }).populate("followers");
+
+    if (user.length === 0) {
+      return {
+        errors: [
+          {
+            type: "user error",
+            message: "User doesn't exist.",
+          },
+        ],
+      };
+    }
+
+    return {
+      users: user[0].followers,
+    };
+  }
+
+  @Query(() => UserResponse)
+  async getFollowing(@Ctx() { currentUser }: MyContext) {
+    if (!currentUser) return notAuthorised();
+
+    const user = await UserModel.find({
+      username: currentUser.username,
+    }).populate("following");
+
+    if (user.length === 0) {
+      return {
+        errors: [
+          {
+            type: "user error",
+            message: "User doesn't exist.",
+          },
+        ],
+      };
+    }
+
+    return {
+      users: user[0].following,
+    };
+  }
+
   @Mutation(() => UserResponse)
   async followUser(
     @Arg("username") username: string,
     @Ctx() { currentUser }: MyContext
   ) {
-    if (!currentUser) {
-      return {
-        errors: [
-          {
-            type: "authorisation error",
-            message: "Not authorised to carry out this action.",
-          },
-        ],
-      };
-    }
+    if (!currentUser) return notAuthorised();
 
     const userToFollow = await UserModel.find({
       username: username,
