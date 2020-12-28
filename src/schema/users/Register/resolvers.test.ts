@@ -18,8 +18,7 @@ afterAll(async () => {
 describe("User register resolvers", () => {
   test("query getting all users", async () => {
     // Database setup
-    const users = await generateUsers(3);
-    const usersNoPw = users.map(({ password: _password, ...rest }) => rest);
+    const { cleanedUsers } = await generateUsers(3);
 
     // Request
     const getAllUsers = `
@@ -42,14 +41,14 @@ describe("User register resolvers", () => {
     expect(response).toMatchObject({
       data: {
         getAllUsers: {
-          users: usersNoPw,
+          users: cleanedUsers,
         },
       },
     });
 
     // Database check
     const allUsers = await UserModel.find({});
-    usersNoPw.forEach((user) => {
+    cleanedUsers.forEach((user) => {
       expect(allUsers).toEqual(
         expect.arrayContaining([expect.objectContaining(user)])
       );
@@ -58,8 +57,7 @@ describe("User register resolvers", () => {
 
   test("query getting one user", async () => {
     // Database setup
-    const users = await generateUsers(2);
-    const usersNoPw = users.map(({ password: _password, ...rest }) => rest);
+    const { cleanedUsers } = await generateUsers(2);
 
     // Request
     const getUser = `
@@ -77,7 +75,7 @@ describe("User register resolvers", () => {
     const response = await graphqlRequest({
       source: getUser,
       variableValues: {
-        username: users[0].username,
+        username: cleanedUsers[0].username,
       },
     });
 
@@ -85,24 +83,20 @@ describe("User register resolvers", () => {
     expect(response).toMatchObject({
       data: {
         getUser: {
-          user: usersNoPw[0],
+          user: cleanedUsers[0],
         },
       },
     });
 
     // Database check
-    const dbUser = await UserModel.find({ username: users[0].username });
+    const dbUser = await UserModel.find({ username: cleanedUsers[0].username });
     expect(dbUser.length).toEqual(1);
-    expect(dbUser[0]).toEqual(expect.objectContaining(usersNoPw[0]));
+    expect(dbUser[0]).toEqual(expect.objectContaining(cleanedUsers[0]));
   });
 
   test("query who am I", async () => {
     // Database and user setup
-    const users = await generateUsers(1);
-    const cleanedUsers = users.map(({ password: _password, ...rest }) => rest);
-
-    const modelQuery = await UserModel.find({ username: users[0].username });
-    const currentUser = modelQuery[0];
+    const { cleanedUsers, dbUsers } = await generateUsers();
 
     // Request;
     const whoAmI = `
@@ -120,7 +114,7 @@ describe("User register resolvers", () => {
 
     const response = await graphqlRequest({
       source: whoAmI,
-      currentUser,
+      currentUser: dbUsers[0],
     });
 
     // Response check
