@@ -802,7 +802,6 @@ describe("User register resolvers", () => {
     // Database setup
     const { cleanedUsers, dbUsers } = await generateUsers();
     const options = {
-      username: dbUsers[0].username,
       emailAddress: faker.internet.email(),
       firstName: faker.name.firstName(),
       lastName: faker.name.lastName(),
@@ -811,10 +810,12 @@ describe("User register resolvers", () => {
     // Request
     const updateUser = `
       mutation updateUser(
+        $username: String!
         $options: UpdateUserInput!
       ) {
         updateUser(
-          options: $options,
+          username: $username,
+          options: $options
         ) {
           user {
             username
@@ -829,6 +830,7 @@ describe("User register resolvers", () => {
     const response = await graphqlRequest({
       source: updateUser,
       variableValues: {
+        username: dbUsers[0].username,
         options,
       },
       currentUser: dbUsers[0],
@@ -862,7 +864,6 @@ describe("User register resolvers", () => {
     // Database setup
     const { dbUsers } = await generateUsers();
     const options = {
-      username: "madeUpUser",
       emailAddress: faker.internet.email(),
       firstName: faker.name.firstName(),
       lastName: faker.name.lastName(),
@@ -871,10 +872,12 @@ describe("User register resolvers", () => {
     // Request
     const updateUser = `
       mutation updateUser(
+        $username: String!
         $options: UpdateUserInput!
       ) {
         updateUser(
-          options: $options,
+          username: $username,
+          options: $options
         ) {
           errors {
             message
@@ -886,6 +889,7 @@ describe("User register resolvers", () => {
     const response = await graphqlRequest({
       source: updateUser,
       variableValues: {
+        username: "madeUpUser",
         options,
       },
       currentUser: dbUsers[0],
@@ -905,7 +909,6 @@ describe("User register resolvers", () => {
     // Database setup
     const { cleanedUsers, dbUsers } = await generateUsers(2);
     const options = {
-      username: dbUsers[1].username,
       emailAddress: faker.internet.email(),
       firstName: faker.name.firstName(),
       lastName: faker.name.lastName(),
@@ -914,10 +917,12 @@ describe("User register resolvers", () => {
     // Request
     const updateUser = `
       mutation updateUser(
+        $username: String!
         $options: UpdateUserInput!
       ) {
         updateUser(
-          options: $options,
+          username: $username,
+          options: $options
         ) {
           errors {
             message
@@ -929,6 +934,7 @@ describe("User register resolvers", () => {
     const response = await graphqlRequest({
       source: updateUser,
       variableValues: {
+        username: dbUsers[1].username,
         options,
       },
       currentUser: dbUsers[0],

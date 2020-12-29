@@ -135,12 +135,13 @@ export class UserRegisterResolver {
 
   @Mutation(() => UserResponse)
   async updateUser(
+    @Arg("username") username: string,
     @Arg("options") options: UpdateUserInput,
     @Ctx() { currentUser }: MyContext
   ) {
     if (!currentUser) return notAuthorisedError();
 
-    const userToUpdate = await getUser(options.username);
+    const userToUpdate = await getUser(username);
     if (!userToUpdate) return missingUserError();
 
     if (userToUpdate.username !== currentUser.username)

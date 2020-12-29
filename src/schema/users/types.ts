@@ -5,8 +5,6 @@ import { User } from "./model";
 
 @InputType()
 export class UpdateUserInput {
-  @Field()
-  username!: string;
   @Field({ nullable: true })
   emailAddress?: string;
   @Field({ nullable: true })
