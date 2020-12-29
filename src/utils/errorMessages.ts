@@ -36,7 +36,7 @@ export const missingUserError = () => {
 
 export const userExistsError = () => {
   return {
-    errors: [{ type: "user error", message: "That username already exists." }],
+    errors: [{ type: "user error", message: "Username already exists." }],
   };
 };
 
