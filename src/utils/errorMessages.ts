@@ -94,3 +94,25 @@ export const notFollowingError = () => {
     ],
   };
 };
+
+export const missingFollowerError = () => {
+  return {
+    errors: [
+      {
+        type: "user error",
+        message: "This user is not a follower.",
+      },
+    ],
+  };
+};
+
+export const notToSelfError = () => {
+  return {
+    errors: [
+      {
+        type: "user error",
+        message: "Cannot carry out this action on yourself.",
+      },
+    ],
+  };
+};
