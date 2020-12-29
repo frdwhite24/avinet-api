@@ -286,4 +286,161 @@ describe("User social resolvers", () => {
       },
     });
   });
+
+  test("mutation remove follower", async () => {
+    // Database and user setup
+    const { dbUsers, cleanedUsers } = await generateUsers(2);
+
+    dbUsers[0].following.push(dbUsers[1]._id);
+    dbUsers[1].followers.push(dbUsers[0]._id);
+    await dbUsers[0].save();
+    await dbUsers[1].save();
+
+    // Request
+    const removeFollower = `
+      mutation removeFollower($username: String!) {
+        removeFollower(username: $username) {
+          user {
+            username
+            firstName
+            lastName
+            emailAddress
+            following {
+              username
+            }
+            followers {
+              username
+            }
+          }
+        }
+      }
+    `;
+    const response = await graphqlRequest({
+      source: removeFollower,
+      variableValues: {
+        username: dbUsers[0].username,
+      },
+      currentUser: dbUsers[1],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        removeFollower: {
+          user: {
+            ...cleanedUsers[1],
+            following: [],
+            followers: [],
+          },
+        },
+      },
+    });
+
+    // Database check
+    const allUsers = await UserModel.find({}).lean();
+    const followingUser = allUsers.find(
+      (user) => user.username === cleanedUsers[0].username
+    );
+    const followedUser = allUsers.find(
+      (user) => user.username === cleanedUsers[1].username
+    );
+    expect(followingUser?.following).toEqual([]);
+    expect(followedUser?.followers).toEqual([]);
+  });
+
+  test("mutation remove follower fails to self", async () => {
+    // Database and user setup
+    const { dbUsers } = await generateUsers();
+
+    // Request
+    const removeFollower = `
+      mutation removeFollower($username: String!) {
+        removeFollower(username: $username) {
+          errors {
+            message
+          }
+        }
+      }
+    `;
+    const response = await graphqlRequest({
+      source: removeFollower,
+      variableValues: {
+        username: dbUsers[0].username,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        removeFollower: {
+          errors: [{ message: "Cannot carry out this action on yourself." }],
+        },
+      },
+    });
+  });
+
+  test("mutation remove follower fails missing user", async () => {
+    // Database and user setup
+    const { dbUsers } = await generateUsers();
+
+    // Request
+    const removeFollower = `
+      mutation removeFollower($username: String!) {
+        removeFollower(username: $username) {
+          errors {
+            message
+          }
+        }
+      }
+    `;
+    const response = await graphqlRequest({
+      source: removeFollower,
+      variableValues: {
+        username: "madeUpUser",
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        removeFollower: {
+          errors: [{ message: "User doesn't exist." }],
+        },
+      },
+    });
+  });
+
+  test("mutation remove follower fails not following user", async () => {
+    // Database and user setup
+    const { dbUsers } = await generateUsers(2);
+
+    // Request
+    const removeFollower = `
+      mutation removeFollower($username: String!) {
+        removeFollower(username: $username) {
+          errors {
+            message
+          }
+        }
+      }
+    `;
+    const response = await graphqlRequest({
+      source: removeFollower,
+      variableValues: {
+        username: dbUsers[1].username,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        removeFollower: {
+          errors: [{ message: "This user is not a follower." }],
+        },
+      },
+    });
+  });
 });
