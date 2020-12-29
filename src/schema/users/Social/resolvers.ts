@@ -6,10 +6,12 @@ import { MyContext } from "../../../types";
 import { isError } from "../../../utils/typeGuards";
 import {
   alreadyFollowingError,
+  missingFollowerError,
   missingUserError,
   mutationFailedError,
   notAuthorisedError,
   notFollowingError,
+  notToSelfError,
 } from "../../../utils/errorMessages";
 import { getUser } from "../services";
 
@@ -45,6 +47,7 @@ export class UserSocialResolvers {
     @Ctx() { currentUser }: MyContext
   ) {
     if (!currentUser) return notAuthorisedError();
+    if (currentUser.username === username) return notToSelfError();
 
     const userToFollow = await getUser(username, false);
     if (!userToFollow) return missingUserError();
@@ -95,6 +98,7 @@ export class UserSocialResolvers {
     @Ctx() { currentUser }: MyContext
   ) {
     if (!currentUser) return notAuthorisedError();
+    if (currentUser.username === username) return notToSelfError();
 
     const userToUnfollow = await getUser(username, false);
     if (!userToUnfollow) return missingUserError();
@@ -129,6 +133,72 @@ export class UserSocialResolvers {
 
     try {
       await userToUnfollow.save();
+      await currentUser.save();
+    } catch (error) {
+      if (isError(error)) {
+        if (process.env.NODE_ENV !== "production") {
+          return {
+            errors: [{ type: "user error", message: error.message }],
+          };
+        } else {
+          return mutationFailedError("user");
+        }
+      }
+    }
+
+    // This should be improved, it's a long standing issue with mongoose not
+    // being able to repopulate a saved document and so an extra db query
+    // must be carried out to send in the response object
+    // TODO: Find a better way to do this rather than carry out extra DB query
+    const updatedCurrentUser = await getUser(currentUser.username);
+    if (!updatedCurrentUser) return missingUserError();
+
+    return {
+      user: updatedCurrentUser,
+    };
+  }
+
+  @Mutation(() => UserResponse)
+  async removeFollower(
+    @Arg("username") username: string,
+    @Ctx() { currentUser }: MyContext
+  ) {
+    if (!currentUser) return notAuthorisedError();
+    if (currentUser.username === username) return notToSelfError();
+
+    const userToRemove = await getUser(username, false);
+    if (!userToRemove) return missingUserError();
+
+    // TODO: clean up this find block
+    if (
+      !currentUser.followers.find((follower) => {
+        if (!follower) {
+          return;
+        }
+        return follower.toString() === userToRemove._id.toString();
+      })
+    )
+      return missingFollowerError();
+
+    // Filter out userId, as per above TODO, this needs to be handled cleaner,
+    // the problem is because the followers and following array can be [] and
+    // so the variable within array methods can be undefined requiring the
+    // extra if statement
+    userToRemove.following = userToRemove.following.filter((userId) => {
+      if (!userId) {
+        return;
+      }
+      return userId.toString() !== currentUser._id.toString();
+    });
+    currentUser.followers = currentUser.followers.filter((userId) => {
+      if (!userId) {
+        return;
+      }
+      return userId.toString() !== userToRemove._id.toString();
+    });
+
+    try {
+      await userToRemove.save();
       await currentUser.save();
     } catch (error) {
       if (isError(error)) {
