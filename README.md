@@ -45,6 +45,7 @@ _(Prioritise the below list)_
   challenges similar to Duolingo.
 - Users can create and manage groups (could be used for airfields etc.)
 - A user can invite other people by putting in their email.
+- A user can display a tagline such as "Instructor", or "Trainee Pilot".
 - ?? A user can send messages to other users if they follow each other ??
 - ?? A user can plan their upcoming flights, be given links to key resources
   such as NOTAMs, official weather sources, aviation maps ??
