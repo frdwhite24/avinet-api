@@ -1,11 +1,13 @@
 import faker from "faker";
+import { verify as passwordVerify } from "argon2";
 import { verify } from "jsonwebtoken";
 import { connect, disconnect } from "../../../database";
 import { graphqlRequest } from "../../../test-utils/graphqlRequest";
 import { generateUsers } from "../../../test-utils/userGen";
 import { MyToken } from "../../../types";
 import { JWT_SECRET, MIN_PASSWORD_LENGTH } from "../../../utils/config";
-import { UserModel } from "../model";
+import { User, UserModel } from "../model";
+import { DocumentType } from "@typegoose/typegoose";
 
 beforeAll(async () => {
   await connect();
@@ -125,7 +127,7 @@ describe("User register resolvers", () => {
   });
 
   test("query who am I", async () => {
-    // Database and user setup
+    // Database setup
     const { cleanedUsers, dbUsers } = await generateUsers();
 
     // Request
@@ -611,5 +613,341 @@ describe("User register resolvers", () => {
         },
       },
     });
+  });
+
+  test("mutation update password", async () => {
+    // Database setup
+    const { users, cleanedUsers, dbUsers } = await generateUsers();
+    const newPassword = faker.internet.password();
+
+    // Request
+    const updatePassword = `
+      mutation updatePassword(
+        $password: String!
+        $newPassword: String!
+      ) {
+        updatePassword(
+          password: $password,
+          newPassword: $newPassword
+        ) {
+          user {
+            username
+            firstName
+            lastName
+            emailAddress
+          }
+        }
+      }
+    `;
+
+    const response = await graphqlRequest({
+      source: updatePassword,
+      variableValues: {
+        password: users[0].password,
+        newPassword: newPassword,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        updatePassword: {
+          user: cleanedUsers[0],
+        },
+      },
+    });
+
+    // Database check
+    const updatedUser = (await UserModel.findById(
+      dbUsers[0]._id
+    )) as DocumentType<User>;
+    expect(updatedUser).toBeDefined();
+
+    const isNewPassValid = await passwordVerify(
+      updatedUser.password,
+      newPassword
+    );
+    const isOldPassValid = await passwordVerify(
+      updatedUser.password,
+      users[0].password
+    );
+    expect(isNewPassValid).toBeTruthy();
+    expect(isOldPassValid).toBeFalsy();
+  });
+
+  test("mutation update password fails incorrect password", async () => {
+    // Database setup
+    const { users, dbUsers } = await generateUsers();
+    const newPassword = faker.internet.password();
+
+    // Request
+    const updatePassword = `
+      mutation updatePassword(
+        $password: String!
+        $newPassword: String!
+      ) {
+        updatePassword(
+          password: $password,
+          newPassword: $newPassword
+        ) {
+          errors {
+            message
+          }
+        }
+      }
+    `;
+
+    const response = await graphqlRequest({
+      source: updatePassword,
+      variableValues: {
+        password: "incorrectPassword",
+        newPassword: newPassword,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        updatePassword: {
+          errors: [{ message: "Incorrect password." }],
+        },
+      },
+    });
+
+    // Database check
+    const updatedUser = (await UserModel.findById(
+      dbUsers[0]._id
+    )) as DocumentType<User>;
+    expect(updatedUser).toBeDefined();
+
+    const isNewPassValid = await passwordVerify(
+      updatedUser.password,
+      newPassword
+    );
+    const isOldPassValid = await passwordVerify(
+      updatedUser.password,
+      users[0].password
+    );
+    expect(isNewPassValid).toBeFalsy();
+    expect(isOldPassValid).toBeTruthy();
+  });
+
+  test("mutation update password fails too short password", async () => {
+    // Database setup
+    const { users, dbUsers } = await generateUsers();
+    const newPassword = faker.internet
+      .password()
+      .substring(0, MIN_PASSWORD_LENGTH - 1);
+
+    // Request
+    const updatePassword = `
+      mutation updatePassword(
+        $password: String!
+        $newPassword: String!
+      ) {
+        updatePassword(
+          password: $password,
+          newPassword: $newPassword
+        ) {
+          errors {
+            message
+          }
+        }
+      }
+    `;
+
+    const response = await graphqlRequest({
+      source: updatePassword,
+      variableValues: {
+        password: users[0].password,
+        newPassword: newPassword,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        updatePassword: {
+          errors: [
+            {
+              message: `Password length is too short, minimum length is ${MIN_PASSWORD_LENGTH} chars.`,
+            },
+          ],
+        },
+      },
+    });
+
+    // Database check
+    const updatedUser = (await UserModel.findById(
+      dbUsers[0]._id
+    )) as DocumentType<User>;
+    expect(updatedUser).toBeDefined();
+
+    const isNewPassValid = await passwordVerify(
+      updatedUser.password,
+      newPassword
+    );
+    const isOldPassValid = await passwordVerify(
+      updatedUser.password,
+      users[0].password
+    );
+    expect(isNewPassValid).toBeFalsy();
+    expect(isOldPassValid).toBeTruthy();
+  });
+
+  test("mutation update user", async () => {
+    // Database setup
+    const { cleanedUsers, dbUsers } = await generateUsers();
+    const options = {
+      username: dbUsers[0].username,
+      emailAddress: faker.internet.email(),
+      firstName: faker.name.firstName(),
+      lastName: faker.name.lastName(),
+    };
+
+    // Request
+    const updateUser = `
+      mutation updateUser(
+        $options: UpdateUserInput!
+      ) {
+        updateUser(
+          options: $options,
+        ) {
+          user {
+            username
+            firstName
+            lastName
+            emailAddress
+          }
+        }
+      }
+    `;
+
+    const response = await graphqlRequest({
+      source: updateUser,
+      variableValues: {
+        options,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        updateUser: {
+          user: {
+            ...cleanedUsers[0],
+            emailAddress: options.emailAddress,
+            firstName: options.firstName,
+            lastName: options.lastName,
+          },
+        },
+      },
+    });
+
+    // Database check
+    const updatedUser = (await UserModel.findById(
+      dbUsers[0]._id
+    )) as DocumentType<User>;
+    expect(updatedUser).toBeDefined();
+    expect(updatedUser.firstName).toBe(options.firstName);
+    expect(updatedUser.lastName).toBe(options.lastName);
+    expect(updatedUser.emailAddress).toBe(options.emailAddress);
+  });
+
+  test("mutation update user fails missing user", async () => {
+    // Database setup
+    const { dbUsers } = await generateUsers();
+    const options = {
+      username: "madeUpUser",
+      emailAddress: faker.internet.email(),
+      firstName: faker.name.firstName(),
+      lastName: faker.name.lastName(),
+    };
+
+    // Request
+    const updateUser = `
+      mutation updateUser(
+        $options: UpdateUserInput!
+      ) {
+        updateUser(
+          options: $options,
+        ) {
+          errors {
+            message
+          }
+        }
+      }
+    `;
+
+    const response = await graphqlRequest({
+      source: updateUser,
+      variableValues: {
+        options,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        updateUser: {
+          errors: [{ message: "User doesn't exist." }],
+        },
+      },
+    });
+  });
+
+  test("mutation update user fails not authorised", async () => {
+    // Database setup
+    const { cleanedUsers, dbUsers } = await generateUsers(2);
+    const options = {
+      username: dbUsers[1].username,
+      emailAddress: faker.internet.email(),
+      firstName: faker.name.firstName(),
+      lastName: faker.name.lastName(),
+    };
+
+    // Request
+    const updateUser = `
+      mutation updateUser(
+        $options: UpdateUserInput!
+      ) {
+        updateUser(
+          options: $options,
+        ) {
+          errors {
+            message
+          }
+        }
+      }
+    `;
+
+    const response = await graphqlRequest({
+      source: updateUser,
+      variableValues: {
+        options,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        updateUser: {
+          errors: [{ message: "Not authorised to carry out this action." }],
+        },
+      },
+    });
+
+    // Database check
+    const updatedUser = (await UserModel.findById(
+      dbUsers[1]._id
+    )) as DocumentType<User>;
+    expect(updatedUser).toBeDefined();
+    expect(updatedUser).toEqual(expect.objectContaining(cleanedUsers[1]));
   });
 });
