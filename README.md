@@ -44,6 +44,7 @@ _(Prioritise the below list)_
   of airfields flow into etc. Rank/level/rewards are shown on profile. Maybe
   challenges similar to Duolingo.
 - Users can create and manage groups (could be used for airfields etc.)
+- A user can invite other people by putting in their email.
 - ?? A user can send messages to other users if they follow each other ??
 - ?? A user can plan their upcoming flights, be given links to key resources
   such as NOTAMs, official weather sources, aviation maps ??
