@@ -8,6 +8,9 @@
     "test": "CI=true NODE_ENV=test jest --colors --runInBand --detectOpenHandles",
     "test:coverage": "CI=true NODE_ENV=test jest --colors --runInBand --collectCoverage",
     "test:staged": "CI=true NODE_ENV=test jest --findRelatedTests --runInBand",
+    "download:airports": "./scripts/getAirports.sh",
+    "upload:airports": "ts-node src/utils/airportData.ts",
+    "data:airports": "./scripts/getAirports.sh && ts-node src/utils/airportData.ts",
     "dev": "NODE_ENV=development ts-node-dev src/index.ts",
     "build": "tsc",
     "start": "NODE_ENV=production node dist/index.js"
@@ -23,6 +26,7 @@
   },
   "homepage": "https://github.com/frdwhite24/avinet-back#readme",
   "devDependencies": {
+    "@types/csvtojson": "^1.1.5",
     "@types/express": "^4.17.9",
     "@types/faker": "^5.1.5",
     "@types/jest": "^26.0.19",
@@ -32,6 +36,7 @@
     "@types/supertest": "^2.0.10",
     "@typescript-eslint/eslint-plugin": "^4.8.2",
     "@typescript-eslint/parser": "^4.8.2",
+    "csvtojson": "^2.0.10",
     "eslint": "^7.14.0",
     "faker": "^5.1.0",
     "husky": "^4.3.0",
