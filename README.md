@@ -22,14 +22,15 @@ _(Prioritise the below list)_
   can choose what is public and what is private about their account
   (authentication & privacy settings required).
 - A user can log a flight. When they are doing this, they can choose which
-  aircraft they flew, which airport they flew to and from, and other key
-  metrics typically recorded in the flight log book such as flying hours,
-  landings & take-offs, whether they were a pilot under instruction, commanding
-  pilot, co-pilot, date and time. Based on the date and time, the weather is
-  automatically populated. The flight will have a title, a description of how
-  it went, maybe some photos to go with it. Embedded with the flight post is a
-  map showing their route from each airfield, or a halo around one airfield if
-  they did airfield work or flew from and to the same airfield.
+  aircraft they flew, which airport they flew to and from
+  [source](https://ourairports.com/data/), and other key metrics typically
+  recorded in the flight log book such as flying hours, landings & take-offs,
+  whether they were a pilot under instruction, commanding pilot, co-pilot, date
+  and time. Based on the date and time, the weather is automatically populated.
+  The flight will have a title, a description of how it went, maybe some photos
+  to go with it. Embedded with the flight post is a map showing their route
+  from each airfield, or a halo around one airfield if they did airfield work
+  or flew from and to the same airfield.
 - Users can see their own personal log book on their profiles.
 - A user can follow other users and see more detailed information about the
   people that accept their requests (authorisation required).
