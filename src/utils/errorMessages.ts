@@ -116,3 +116,9 @@ export const notToSelfError = () => {
     ],
   };
 };
+
+export const invalidDate = () => {
+  return {
+    errors: [{ type: "date error", message: "Invalid date value provided." }],
+  };
+};

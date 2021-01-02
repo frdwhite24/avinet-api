@@ -8,12 +8,13 @@ import {
 } from "type-graphql/dist/decorators";
 import { MyContext } from "../../types";
 import {
+  invalidDate,
   missingDocError,
   mutationFailedError,
   notAuthorisedError,
 } from "../../utils/errorMessages";
 import { getFlightTitle } from "../../utils/helpers";
-import { isError } from "../../utils/typeGuards";
+import { isError, isHour } from "../../utils/typeGuards";
 import { FlightModel } from "./model";
 import { getAllFlights, getFlight } from "./services";
 import { FlightInfoInput, FlightResponse } from "./types";
@@ -44,8 +45,14 @@ export class FlightResolvers {
     @Ctx() { currentUser }: MyContext
   ) {
     if (!currentUser) return notAuthorisedError();
+    const timeOfDay = options.flightTimeDate.getHours();
 
-    const title = getFlightTitle(options.flightTimeDate.getHours());
+    let title: string;
+    if (isHour(timeOfDay)) {
+      title = getFlightTitle(timeOfDay);
+    } else {
+      return invalidDate();
+    }
 
     // TODO: implement a fetch to a weather API for time and loc of flight
 
