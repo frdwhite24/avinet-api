@@ -3,7 +3,7 @@ import { verify as passwordVerify } from "argon2";
 import { verify } from "jsonwebtoken";
 import { connect, disconnect } from "../../../database";
 import { graphqlRequest } from "../../../test-utils/graphqlRequest";
-import { generateUsers } from "../../../test-utils/userGen";
+import { generateUsers } from "../../../test-utils/generators";
 import { MyToken } from "../../../types";
 import { JWT_SECRET, MIN_PASSWORD_LENGTH } from "../../../utils/config";
 import { User, UserModel } from "../model";
