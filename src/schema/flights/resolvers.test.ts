@@ -1,6 +1,9 @@
+import faker from "faker";
 import { connect, disconnect } from "../../database";
-import { generateFlights } from "../../test-utils/generators";
+import { generateFlights, generateUsers } from "../../test-utils/generators";
 import { graphqlRequest } from "../../test-utils/graphqlRequest";
+import { getFlightTitle } from "../../utils/helpers";
+import { isHour } from "../../utils/typeGuards";
 import { FlightModel } from "./model";
 
 beforeAll(async () => {
@@ -73,8 +76,6 @@ describe("Querying flights", () => {
       },
     });
 
-    console.log(response);
-
     // Response check
     expect(response).toMatchObject({
       data: {
@@ -83,6 +84,98 @@ describe("Querying flights", () => {
             _id: dbFlights[1]._id.toString(),
             totalFlightTime: dbFlights[1].totalFlightTime,
             title: dbFlights[1].title,
+          },
+        },
+      },
+    });
+  });
+});
+
+describe("Mutating flights", () => {
+  test("to create a flight with custom title", async () => {
+    // Database setup
+    const { dbUsers } = await generateUsers();
+
+    const options = {
+      flightTimeDate: "2018-12-25, 12:30",
+      totalFlightTime: Math.floor(Math.random() * 6),
+      title: faker.lorem.sentence(),
+    };
+
+    // Request
+    const createFlight = `
+      mutation createFlight($options: FlightInfoInput!){
+        createFlight(options: $options) {
+          flight {
+            totalFlightTime
+            title
+          }
+        }
+      }
+    `;
+    const response = await graphqlRequest({
+      source: createFlight,
+      variableValues: {
+        options,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        createFlight: {
+          flight: {
+            totalFlightTime: options.totalFlightTime,
+            title: options.title,
+          },
+        },
+      },
+    });
+  });
+
+  test("to create a flight with default time based title", async () => {
+    // Database setup
+    const { dbUsers } = await generateUsers();
+    const flightTime = "2018-12-25, 12:30";
+    const flightHours = new Date(flightTime).getHours();
+
+    if (!isHour(flightHours)) {
+      throw new Error("Unable to extract date from faked date object.");
+    }
+    const expectedTitle = getFlightTitle(flightHours);
+
+    const options = {
+      flightTimeDate: flightTime,
+      totalFlightTime: Math.floor(Math.random() * 6),
+    };
+
+    // Request
+    const createFlight = `
+      mutation createFlight($options: FlightInfoInput!){
+        createFlight(options: $options) {
+          flight {
+            totalFlightTime
+            title
+          }
+        }
+      }
+    `;
+    const response = await graphqlRequest({
+      source: createFlight,
+      variableValues: {
+        options,
+      },
+      currentUser: dbUsers[0],
+    });
+
+    // Response check
+    expect(response).toMatchObject({
+      data: {
+        createFlight: {
+          flight: {
+            totalFlightTime: options.totalFlightTime,
+            title: expectedTitle,
           },
         },
       },

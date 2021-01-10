@@ -29,4 +29,7 @@ export class FlightInfoInput {
 
   @Field()
   totalFlightTime?: number;
+
+  @Field({ nullable: true })
+  title?: string;
 }

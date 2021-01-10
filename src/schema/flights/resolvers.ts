@@ -48,10 +48,14 @@ export class FlightResolvers {
     const timeOfDay = options.flightTimeDate.getHours();
 
     let title: string;
-    if (isHour(timeOfDay)) {
-      title = getFlightTitle(timeOfDay);
+    if (!options.title) {
+      if (isHour(timeOfDay)) {
+        title = getFlightTitle(timeOfDay);
+      } else {
+        return invalidDate();
+      }
     } else {
-      return invalidDate();
+      title = options.title;
     }
 
     // TODO: implement a fetch to a weather API for time and loc of flight
