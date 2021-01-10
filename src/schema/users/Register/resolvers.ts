@@ -76,8 +76,15 @@ export class UserRegisterResolver {
       }
     }
 
+    const userForToken = {
+      username: user.username,
+      id: user._id.toString(),
+    };
+    const token = sign(userForToken, JWT_SECRET);
+
     return {
       user,
+      token,
     };
   }
 
